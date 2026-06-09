@@ -5,20 +5,43 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, roc_auc_score, accuracy_score
 from sklearn.preprocessing import LabelEncoder
+import joblib
 
 # 1. Define paths
-DATA_DIR = r"d:\Data Science\projects\F1 Project\f1 dataset"
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "f1 dataset")
+
+def time_to_seconds(t_str):
+    if pd.isna(t_str) or not isinstance(t_str, str) or t_str.strip() == '' or t_str.strip() == '\\N':
+        return np.nan
+    try:
+        parts = t_str.strip().split(':')
+        if len(parts) == 2:
+            return float(parts[0]) * 60 + float(parts[1])
+        elif len(parts) == 1:
+            return float(parts[0])
+    except:
+        return np.nan
+    return np.nan
 
 print("Loading datasets...")
 results = pd.read_csv(os.path.join(DATA_DIR, "results.csv"))
 races = pd.read_csv(os.path.join(DATA_DIR, "races.csv"))
 drivers = pd.read_csv(os.path.join(DATA_DIR, "drivers.csv"))
 constructors = pd.read_csv(os.path.join(DATA_DIR, "constructors.csv"))
+qualifying = pd.read_csv(os.path.join(DATA_DIR, "qualifying.csv"))
 
 # Replace F1 Ergast SQL null placeholder '\N' with NaN/None
-for df in [results, races, drivers, constructors]:
-    df.replace(r'\N', np.nan, inplace=True)
-    df.replace('\\N', np.nan, inplace=True)
+for df_temp in [results, races, drivers, constructors, qualifying]:
+    df_temp.replace(r'\N', np.nan, inplace=True)
+    df_temp.replace('\\N', np.nan, inplace=True)
+
+# Process qualifying times
+for col in ['q1', 'q2', 'q3']:
+    qualifying[col + '_sec'] = qualifying[col].apply(time_to_seconds)
+
+qualifying['best_qual_time'] = qualifying[['q1_sec', 'q2_sec', 'q3_sec']].min(axis=1)
+pole_times = qualifying.groupby('raceId')['best_qual_time'].transform('min')
+qualifying['qual_gap_to_pole'] = qualifying['best_qual_time'] - pole_times
 
 # 2. Convert column data types
 results['grid'] = pd.to_numeric(results['grid'], errors='coerce')
@@ -39,6 +62,10 @@ df = results.merge(races[['raceId', 'year', 'round', 'circuitId', 'date']], on='
 df = df.merge(drivers[['driverId', 'driverRef', 'dob', 'nationality']], on='driverId', how='inner')
 # Merge with constructor info
 df = df.merge(constructors[['constructorId', 'constructorRef']], on='constructorId', how='inner')
+# Merge with qualifying info
+df = df.merge(qualifying[['raceId', 'driverId', 'position', 'qual_gap_to_pole']].rename(columns={'position': 'qual_position'}), on=['raceId', 'driverId'], how='left')
+df['qual_position'] = df['qual_position'].fillna(df['grid'])
+df['qual_gap_to_pole'] = df['qual_gap_to_pole'].fillna(5.0)
 
 # Filter for modern era (post-2000)
 df = df[df['year'] >= 2000].copy()
@@ -89,6 +116,8 @@ test_df = df[df['year'] >= 2022].copy()
 
 features = [
     'grid',
+    'qual_position',
+    'qual_gap_to_pole',
     'driver_encoded',
     'constructor_encoded',
     'circuitId',
@@ -134,3 +163,11 @@ importances = pd.Series(model.feature_importances_, index=features).sort_values(
 print("\n=== Feature Importances ===")
 for col, val in importances.items():
     print(f"{col:<30}: {val:.4f}")
+
+# 9. Save model and preprocessing artifacts
+print("\nSaving model and encoders...")
+joblib.dump(model, 'f1_podium_model.joblib')
+joblib.dump(le_driver, 'le_driver.joblib')
+joblib.dump(le_constructor, 'le_constructor.joblib')
+print("Saved f1_podium_model.joblib, le_driver.joblib, and le_constructor.joblib successfully!")
+
