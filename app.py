@@ -6,7 +6,7 @@ import joblib
 
 # Set Page Config
 st.set_page_config(
-    page_title="F1 Grand Prix Podium Simulator",
+    page_title="F1 Prediction Hub",
     page_icon="🏆",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -124,13 +124,30 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Main Title Banner
+st.markdown("""
+<div class="title-banner">
+    <h1> <span class="f1-accent">F1</span> Prediction Hub</h1>
+    <p style="color: #8b9bb4; font-size: 1.1rem; margin-top: 0.5rem; margin-bottom: 0;">
+        Real-Time Formula 1 Podium Simulations & Strategy Analytics 
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
 # Asset Loader (No cache to prevent stale model versions)
 def load_assets():
     DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "f1 dataset")
     
+    # Load Podium Simulator assets
     model = joblib.load('f1_podium_model.joblib')
     le_driver = joblib.load('le_driver.joblib')
     le_constructor = joblib.load('le_constructor.joblib')
+    
+    # Load Pit Stop Predictor assets
+    pit_model = joblib.load('f1_pit_stop_model.joblib')
+    le_driver_pit = joblib.load('le_driver_pit.joblib')
+    le_constructor_pit = joblib.load('le_constructor_pit.joblib')
+    le_race_pit = joblib.load('le_race_pit.joblib')
     
     drivers_df = pd.read_csv(os.path.join(DATA_DIR, "drivers.csv"))
     constructors_df = pd.read_csv(os.path.join(DATA_DIR, "constructors.csv"))
@@ -150,10 +167,96 @@ def load_assets():
     constructors_df = constructors_df[constructors_df['constructorId'].isin(active_constructor_ids)].copy()
     circuits_df = circuits_df[circuits_df['circuitId'].isin(active_circuit_ids)].copy()
     
-    return model, le_driver, le_constructor, drivers_df, constructors_df, circuits_df
+    # Compute typical/max laps per circuit for stint visualization using modern races (2020-2024)
+    results_df['laps'] = pd.to_numeric(results_df['laps'], errors='coerce')
+    race_laps = results_df.groupby('raceId')['laps'].max().reset_index()
+    race_circuit_map = races_20_24[['raceId', 'circuitId']].merge(race_laps, on='raceId')
+    circuit_laps_dict = race_circuit_map.groupby('circuitId')['laps'].median().round().astype(int).to_dict()
+    
+    # Compute valid driver-constructor pairs (driverRef, constructorRef)
+    results_modern = results_df[results_df['raceId'].isin(active_race_ids)]
+    driver_const_pairs = results_modern.merge(drivers_df, on='driverId').merge(constructors_df, on='constructorId')
+    
+    # Sort by year descending to find the most recent team for each driver
+    driver_const_pairs_sorted = driver_const_pairs.merge(races_df[['raceId', 'year']], on='raceId').sort_values('year', ascending=False)
+    most_recent_constructor = driver_const_pairs_sorted.drop_duplicates(subset=['driverRef']).set_index('driverRef')['constructorRef'].to_dict()
+    
+    # Add historical driver mapping presets explicitly if missing
+    most_recent_constructor['vettel'] = 'aston_martin'
+    most_recent_constructor['latifi'] = 'williams'
+    
+    # Precompute active drivers by year (2020-2024)
+    active_drivers_by_year = {}
+    for y in range(2020, 2025):
+        races_y = races_df[races_df['year'] == y]
+        active_driver_ids_y = results_df[results_df['raceId'].isin(races_y['raceId'])]['driverId'].unique()
+        active_drivers_by_year[y] = set(drivers_df[drivers_df['driverId'].isin(active_driver_ids_y)]['driverRef'])
+        
+    # Precompute all F1 features for all races (2020-2024)
+    qualifying_df = pd.read_csv(os.path.join(DATA_DIR, "qualifying.csv"))
+    
+    for df_temp in [results_df, races_df, drivers_df, constructors_df, qualifying_df]:
+        df_temp.replace(r'\N', np.nan, inplace=True)
+        df_temp.replace('\\N', np.nan, inplace=True)
+        
+    def time_str_to_seconds(t_str):
+        if pd.isna(t_str) or not isinstance(t_str, str) or t_str.strip() == '' or t_str.strip() == '\\N':
+            return np.nan
+        try:
+            parts = t_str.strip().split(':')
+            if len(parts) == 2:
+                return float(parts[0]) * 60 + float(parts[1])
+            elif len(parts) == 1:
+                return float(parts[0])
+        except:
+            return np.nan
+        return np.nan
+
+    for col in ['q1', 'q2', 'q3']:
+        qualifying_df[col + '_sec'] = qualifying_df[col].apply(time_str_to_seconds)
+    qualifying_df['best_qual_time'] = qualifying_df[['q1_sec', 'q2_sec', 'q3_sec']].min(axis=1)
+    pole_times = qualifying_df.groupby('raceId')['best_qual_time'].transform('min')
+    qualifying_df['qual_gap_to_pole'] = qualifying_df['best_qual_time'] - pole_times
+    
+    results_df['grid'] = pd.to_numeric(results_df['grid'], errors='coerce')
+    results_df['positionOrder'] = pd.to_numeric(results_df['positionOrder'], errors='coerce')
+    results_df['points'] = pd.to_numeric(results_df['points'], errors='coerce')
+    races_df['year'] = pd.to_numeric(races_df['year'], errors='coerce')
+    races_df['round'] = pd.to_numeric(races_df['round'], errors='coerce')
+    races_df['date'] = pd.to_datetime(races_df['date'], errors='coerce')
+    drivers_df['dob'] = pd.to_datetime(drivers_df['dob'], errors='coerce')
+    
+    df_feat = results_df.merge(races_df[['raceId', 'year', 'round', 'circuitId', 'date']], on='raceId', how='inner')
+    df_feat = df_feat.merge(drivers_df[['driverId', 'driverRef', 'dob']], on='driverId', how='inner')
+    df_feat = df_feat.merge(constructors_df[['constructorId', 'constructorRef']], on='constructorId', how='inner')
+    df_feat = df_feat.merge(qualifying_df[['raceId', 'driverId', 'position', 'qual_gap_to_pole']].rename(columns={'position': 'qual_position'}), on=['raceId', 'driverId'], how='left')
+    
+    df_feat['qual_position'] = df_feat['qual_position'].fillna(df_feat['grid'])
+    df_feat['qual_gap_to_pole'] = df_feat['qual_gap_to_pole'].fillna(5.0)
+    
+    df_feat.sort_values(by=['date', 'round', 'positionOrder'], inplace=True)
+    df_feat['podium_finish'] = (df_feat['positionOrder'] <= 3).astype(int)
+    df_feat['driver_age'] = (df_feat['date'] - df_feat['dob']).dt.days / 365.25
+    df_feat['win'] = (df_feat['positionOrder'] == 1).astype(int)
+    
+    df_feat['driver_prior_pts_season'] = df_feat.groupby(['year', 'driverId'])['points'].cumsum() - df_feat['points']
+    df_feat['driver_prior_wins_season'] = df_feat.groupby(['year', 'driverId'])['win'].cumsum() - df_feat['win']
+    
+    df_feat['constructor_prior_pts_season'] = df_feat.groupby(['year', 'constructorId'])['points'].cumsum() - df_feat['points']
+    df_feat['constructor_prior_wins_season'] = df_feat.groupby(['year', 'constructorId'])['win'].cumsum() - df_feat['win']
+    
+    driver_hist = df_feat.sort_values('date').groupby('driverId')
+    df_feat['driver_recent_podiums'] = driver_hist['podium_finish'].shift(1).rolling(3, min_periods=1).sum().fillna(0)
+    
+    const_hist = df_feat.sort_values('date').groupby('constructorId')
+    df_feat['constructor_recent_podiums'] = const_hist['podium_finish'].shift(1).rolling(3, min_periods=1).sum().fillna(0)
+    
+    df_features = df_feat[(df_feat['year'] >= 2020) & (df_feat['year'] <= 2024)].copy()
+        
+    return model, le_driver, le_constructor, pit_model, le_driver_pit, le_constructor_pit, le_race_pit, drivers_df, constructors_df, circuits_df, circuit_laps_dict, most_recent_constructor, active_drivers_by_year, df_features, races_df, results_df
 
 try:
-    model, le_driver, le_constructor, drivers_df, constructors_df, circuits_df = load_assets()
+    model, le_driver, le_constructor, pit_model, le_driver_pit, le_constructor_pit, le_race_pit, drivers_df, constructors_df, circuits_df, circuit_laps_dict, most_recent_constructor, active_drivers_by_year, df_features, races_df, results_df = load_assets()
 except Exception as e:
     st.error(f"Error loading models or dataset files: {e}")
     st.stop()
@@ -167,8 +270,17 @@ driver_mapping = drivers_df[drivers_df['driverRef'].isin(known_drivers)].set_ind
 constructor_mapping = constructors_df[constructors_df['constructorRef'].isin(known_constructors)].set_index('constructorRef')['name'].to_dict()
 circuit_mapping = circuits_df.set_index('circuitId')['name'].to_dict()
 
+# Helper to check if driver was active in a given year
+def is_driver_active(driver_ref, year):
+    # Clamp/default year to historical range
+    y = year
+    if y < 2020:
+        y = 2020
+    elif y > 2024:
+        y = 2024
+    return driver_ref in active_drivers_by_year.get(y, set())
+
 # Presets of driver configurations (Grid positions, age, stats)
-# This represents a modern F1 starting grid preset
 modern_grid_presets = [
     {"driver": "max_verstappen", "constructor": "red_bull", "age": 26, "driver_pts": 350, "driver_wins": 12, "constructor_pts": 500, "constructor_wins": 14, "driver_recent": 3, "constructor_recent": 3},
     {"driver": "norris", "constructor": "mclaren", "age": 24, "driver_pts": 220, "driver_wins": 2, "constructor_pts": 380, "constructor_wins": 3, "driver_recent": 2, "constructor_recent": 3},
@@ -194,210 +306,414 @@ modern_grid_presets = [
     {"driver": "latifi", "constructor": "williams", "age": 27, "driver_pts": 2, "driver_wins": 0, "constructor_pts": 8, "constructor_wins": 0, "driver_recent": 0, "constructor_recent": 0}
 ]
 
-# Header Title
-st.markdown("""
-    <div class="title-banner">
-        <h1>🏆 F1 Grand Prix <span class="f1-accent">Podium Simulator</span></h1>
-        <p style="color: #8b9bb4; font-size: 1.1rem; margin: 0.5rem 0 0 0;">
-            Select a circuit and customize your starting grid to calculate and rank podium finish probabilities for the entire field.
-        </p>
-    </div>
-""", unsafe_allow_html=True)
+# Organize page into tabs
+tab1, tab2 = st.tabs(["🏆 Podium Simulator", "🔧 Pit Stop Predictor"])
 
-# Layout Setup
-col_setup, col_preview = st.columns([1, 2], gap="large")
-
-with col_setup:
-    st.markdown("### 🛠️ Simulation Setup")
+with tab1:
+    col_setup, col_preview = st.columns([1, 2], gap="large")
     
-    # Track selection
-    selected_circuit = st.selectbox(
-        "Circuit (Race Track)",
-        options=list(circuit_mapping.keys()),
-        format_func=lambda x: f"{circuit_mapping[x]} ({circuits_df.loc[circuits_df['circuitId'] == x, 'country'].values[0]})"
-    )
-    
-    # Presets
-    st.markdown("##### Starting Lineup Settings")
-    lineup_type = st.radio("Grid Lineup Type", ["Default 22-Driver Grid Preset", "Custom Setup"])
-
-    availability_placeholder = st.empty()
-    drivers_to_simulate = []
-    
-    if lineup_type == "Default 22-Driver Grid Preset":
-        for idx, preset in enumerate(modern_grid_presets):
-            grid_pos = st.number_input(
-                f"{driver_mapping.get(preset['driver'], preset['driver'])} Grid Position", 
-                min_value=1, max_value=22, value=idx+1, key=f"grid_pos_{idx}"
-            )
-            drivers_to_simulate.append({
-                **preset,
-                "grid": grid_pos,
-                "qual_position": grid_pos,
-                "qual_gap_to_pole": (grid_pos - 1) * 0.15
+    with col_setup:
+        st.markdown("### 🛠️ Podium Simulation Setup")
+        
+        # Season selection
+        podium_year = st.selectbox(
+            "Season / Year",
+            options=[2024, 2023, 2022, 2021, 2020],
+            key="podium_year"
+        )
+        
+        # Track selection - only show tracks that hosted a race in podium_year
+        races_in_year = races_df[races_df['year'] == podium_year]
+        circuit_ids_in_year = races_in_year['circuitId'].unique()
+        circuits_in_year_df = circuits_df[circuits_df['circuitId'].isin(circuit_ids_in_year)]
+        circuit_mapping_in_year = circuits_in_year_df.set_index('circuitId')['name'].to_dict()
+        
+        selected_circuit = st.selectbox(
+            "Circuit (Race Track)",
+            options=list(circuit_mapping_in_year.keys()),
+            format_func=lambda x: f"{circuit_mapping_in_year[x]} ({circuits_df.loc[circuits_df['circuitId'] == x, 'country'].values[0]})"
+        )
+        
+        # Query actual historical grid from df_features
+        historical_race_grid = df_features[
+            (df_features['year'] == podium_year) & 
+            (df_features['circuitId'] == selected_circuit)
+        ].copy()
+        
+        # Sort by grid position
+        historical_race_grid = historical_race_grid.sort_values(by='grid')
+        
+        presets_list = []
+        for r in historical_race_grid.to_dict('records'):
+            presets_list.append({
+                "driver": r['driverRef'],
+                "constructor": r['constructorRef'],
+                "age": int(r['driver_age']),
+                "driver_pts": float(r['driver_prior_pts_season']),
+                "driver_wins": int(r['driver_prior_wins_season']),
+                "constructor_pts": float(r['constructor_prior_pts_season']),
+                "constructor_wins": int(r['constructor_prior_wins_season']),
+                "driver_recent": int(r['driver_recent_podiums']),
+                "constructor_recent": int(r['constructor_recent_podiums']),
+                "grid": int(r['grid']),
+                "qual_position": int(r['qual_position']),
+                "qual_gap_to_pole": float(r['qual_gap_to_pole'])
             })
             
-    else:
-        num_drivers = st.slider("Number of Drivers to Custom Configure", min_value=2, max_value=22, value=10)
-        for idx in range(num_drivers):
-            st.markdown(f"**Driver #{idx+1} Settings**")
-            drv = st.selectbox("Select Driver", list(driver_mapping.keys()), key=f"cust_drv_{idx}", index=min(idx, len(driver_mapping)-1))
-            const = st.selectbox("Select Team", list(constructor_mapping.keys()), key=f"cust_const_{idx}", index=min(idx, len(constructor_mapping)-1))
-            grid = st.slider(f"Grid Position", min_value=1, max_value=22, value=idx+1, key=f"cust_grid_{idx}")
-            
-            col_qual1, col_qual2 = st.columns(2)
-            with col_qual1:
-                qual_pos = st.number_input(f"Qualifying Position", min_value=1, max_value=22, value=grid, key=f"cust_qualpos_{idx}")
-            with col_qual2:
-                qual_gap = st.slider(f"Gap to Pole (seconds)", min_value=0.0, max_value=5.0, value=float((grid - 1) * 0.15), step=0.01, key=f"cust_qualgap_{idx}")
+        # Presets
+        st.markdown("##### Starting Lineup Settings")
+        lineup_type = st.radio("Grid Lineup Type", ["Default Grid Preset (Actual Grid)", "Custom Setup"])
+
+        availability_placeholder = st.empty()
+        drivers_to_simulate = []
+        
+        if lineup_type == "Default Grid Preset (Actual Grid)":
+            if not presets_list:
+                st.warning("⚠️ No historical grid data available for this race.")
+            else:
+                for idx, preset in enumerate(presets_list):
+                    default_grid_val = int(preset['grid'])
+                    if default_grid_val <= 0:
+                        default_grid_val = len(presets_list)
+                    # Clamp value to [1, len(presets_list)] to be safe
+                    default_grid_val = max(1, min(default_grid_val, len(presets_list)))
+                    
+                    grid_pos = st.number_input(
+                        f"{driver_mapping.get(preset['driver'], preset['driver'])} Grid Position", 
+                        min_value=1, max_value=max(1, len(presets_list)), value=default_grid_val, key=f"grid_pos_{idx}"
+                    )
+                    drivers_to_simulate.append({
+                        **preset,
+                        "grid": grid_pos
+                    })
                 
-            age = st.slider("Age", min_value=17, max_value=46, value=27, key=f"cust_age_{idx}")
-            
-            # Form
-            col_pts, col_w = st.columns(2)
-            with col_pts:
-                d_pts = st.number_input("Driver Pts", min_value=0, value=50, key=f"cust_dpts_{idx}")
-            with col_w:
-                d_rec = st.slider("Recent Podiums (Last 3)", 0, 3, 1, key=f"cust_drec_{idx}")
+        else:
+            num_drivers = st.slider("Number of Drivers to Custom Configure", min_value=2, max_value=22, value=10)
+            active_driver_refs = sorted(list(active_drivers_by_year.get(podium_year, set())))
+            if not active_driver_refs:
+                active_driver_refs = list(driver_mapping.keys())
                 
-            drivers_to_simulate.append({
-                "driver": drv,
-                "constructor": const,
-                "grid": grid,
-                "qual_position": qual_pos,
-                "qual_gap_to_pole": qual_gap,
-                "age": age,
-                "driver_pts": d_pts,
-                "driver_wins": 1 if d_pts > 25 else 0,
-                "constructor_pts": d_pts + 30,
-                "constructor_wins": 1,
-                "driver_recent": d_rec,
-                "constructor_recent": d_rec + 1
-            })
+            for idx in range(num_drivers):
+                st.markdown(f"**Driver #{idx+1} Settings**")
+                drv = st.selectbox(
+                    "Select Driver",
+                    active_driver_refs,
+                    format_func=lambda x: f"{driver_mapping.get(x, x)} ({'Active' if is_driver_active(x, podium_year) else 'Retired/Inactive'})",
+                    key=f"cust_drv_{idx}_{podium_year}",
+                    index=min(idx, len(active_driver_refs)-1)
+                )
+                
+                # Fetch default stats for this driver in this season
+                driver_season_stats = df_features[
+                    (df_features['year'] == podium_year) & 
+                    (df_features['driverRef'] == drv)
+                ]
+                
+                if not driver_season_stats.empty:
+                    latest_stat = driver_season_stats.sort_values(by='round', ascending=False).iloc[0]
+                    default_const = latest_stat['constructorRef']
+                    default_age = int(latest_stat['driver_age'])
+                    default_pts = float(latest_stat['driver_prior_pts_season'])
+                    default_recent = int(latest_stat['driver_recent_podiums'])
+                else:
+                    default_const = most_recent_constructor.get(drv, list(constructor_mapping.keys())[0])
+                    default_age = 27
+                    default_pts = 50.0
+                    default_recent = 1
+                
+                st.session_state[f"cust_const_disp_{idx}_{podium_year}"] = constructor_mapping[default_const]
+                st.text_input("Team", disabled=True, key=f"cust_const_disp_{idx}_{podium_year}")
+                
+                grid = st.slider(f"Grid Position", min_value=1, max_value=22, value=idx+1, key=f"cust_grid_{idx}_{podium_year}")
+                
+                col_qual1, col_qual2 = st.columns(2)
+                with col_qual1:
+                    qual_pos = st.number_input(f"Qualifying Position", min_value=1, max_value=22, value=grid, key=f"cust_qualpos_{idx}_{podium_year}")
+                with col_qual2:
+                    qual_gap = st.slider(f"Gap to Pole (seconds)", min_value=0.0, max_value=5.0, value=float((grid - 1) * 0.15), step=0.01, key=f"cust_qualgap_{idx}_{podium_year}")
+                    
+                age = st.slider("Age", min_value=17, max_value=46, value=default_age, key=f"cust_age_{idx}_{podium_year}")
+                
+                col_pts, col_w = st.columns(2)
+                with col_pts:
+                    d_pts = st.number_input("Driver Pts", min_value=0.0, value=default_pts, key=f"cust_dpts_{idx}_{podium_year}")
+                with col_w:
+                    d_rec = st.slider("Recent Podiums (Last 3)", 0, 3, default_recent, key=f"cust_drec_{idx}_{podium_year}")
+                    
+                drivers_to_simulate.append({
+                    "driver": drv,
+                    "constructor": default_const,
+                    "grid": grid,
+                    "qual_position": qual_pos,
+                    "qual_gap_to_pole": qual_gap,
+                    "age": age,
+                    "driver_pts": d_pts,
+                    "driver_wins": 1 if d_pts > 25 else 0,
+                    "constructor_pts": d_pts + 30,
+                    "constructor_wins": 1,
+                    "driver_recent": d_rec,
+                    "constructor_recent": d_rec + 1
+                })
 
-    # Update availability placeholder dynamically
-    grid_positions = [d['grid'] for d in drivers_to_simulate]
-    total_slots = len(drivers_to_simulate)
-    all_positions = set(range(1, total_slots + 1))
-    taken_positions = set(grid_positions)
-    available_positions = sorted(list(all_positions - taken_positions))
-    
-    if available_positions:
-        availability_placeholder.info(f"📋 **Available Starting Slots:** {', '.join(['P'+str(p) for p in available_positions])}")
-    else:
-        availability_placeholder.success(f"✅ **All starting slots (P1 to P{total_slots}) successfully assigned!**")
+        # Warning notice for inactive/retired drivers
+        inactive_drivers = [driver_mapping.get(d['driver'], d['driver']) for d in drivers_to_simulate if not is_driver_active(d['driver'], podium_year)]
+        if inactive_drivers:
+            st.warning(f"⚠️ **Retired/Inactive Drivers Selected:** {', '.join(inactive_drivers)} did not race in the {podium_year} season. Simulations for these drivers will rely on historical extrapolation.")
 
-with col_preview:
-    st.markdown("### 🏁 Live Simulation & Forecast Results")
-    st.write("")
-    # Check for duplicate grid positions
-    grid_positions = [d['grid'] for d in drivers_to_simulate]
-    duplicate_grids = sorted(list(set([g for g in grid_positions if grid_positions.count(g) > 1])))
-    
-    if duplicate_grids:
-        st.warning(f"⚠️ **Duplicate Grid Positions Detected!** Positions {', '.join(['P'+str(g) for g in duplicate_grids])} are assigned to multiple drivers. Please ensure each grid position is unique.")
-        sim_clicked = st.button("🏁 Run Race Simulation", type="primary", disabled=True)
-    else:
-        sim_clicked = st.button("🏁 Run Race Simulation", type="primary")
-    
-    if sim_clicked and drivers_to_simulate:
-        # Run predictions for all drivers
-        results = []
-        for d in drivers_to_simulate:
-            d_encoded = le_driver.transform([d['driver']])[0]
-            c_encoded = le_constructor.transform([d['constructor']])[0]
+        # Update availability placeholder dynamically
+        grid_positions = [d['grid'] for d in drivers_to_simulate]
+        total_slots = len(drivers_to_simulate)
+        all_positions = set(range(1, total_slots + 1))
+        taken_positions = set(grid_positions)
+        available_positions = sorted(list(all_positions - taken_positions))
+        
+        if available_positions:
+            availability_placeholder.info(f"📋 **Available Starting Slots:** {', '.join(['P'+str(p) for p in available_positions])}")
+        else:
+            availability_placeholder.success(f"✅ **All starting slots (P1 to P{total_slots}) successfully assigned!**")
+
+    with col_preview:
+        st.markdown("### 🏁 Live Simulation & Forecast Results")
+        st.write("")
+        
+        # Check for duplicate grid positions
+        grid_positions = [d['grid'] for d in drivers_to_simulate]
+        duplicate_grids = sorted(list(set([g for g in grid_positions if grid_positions.count(g) > 1])))
+        
+        if duplicate_grids:
+            st.warning(f"⚠️ **Duplicate Grid Positions Detected!** Positions {', '.join(['P'+str(g) for g in duplicate_grids])} are assigned to multiple drivers.")
+            sim_clicked = st.button("🏁 Run Race Simulation", type="primary", disabled=True)
+        else:
+            sim_clicked = st.button("🏁 Run Race Simulation", type="primary")
+        
+        if sim_clicked and drivers_to_simulate:
+            # Run predictions for all drivers
+            results = []
+            for d in drivers_to_simulate:
+                d_encoded = le_driver.transform([d['driver']])[0]
+                c_encoded = le_constructor.transform([d['constructor']])[0]
+                
+                features = np.array([[
+                    d['grid'],
+                    d.get('qual_position', d['grid']),
+                    d.get('qual_gap_to_pole', 0.0),
+                    d_encoded,
+                    c_encoded,
+                    selected_circuit,
+                    d['age'],
+                    d['driver_pts'],
+                    d['driver_wins'],
+                    d['constructor_pts'],
+                    d['constructor_wins'],
+                    d['driver_recent'],
+                    d['constructor_recent']
+                ]])
+                
+                prob = model.predict_proba(features)[0][1]
+                results.append({
+                    "name": driver_mapping.get(d['driver'], d['driver']),
+                    "team": constructor_mapping.get(d['constructor'], d['constructor']),
+                    "grid": d['grid'],
+                    "probability": prob
+                })
+                
+            results_sorted = sorted(results, key=lambda x: x['probability'], reverse=True)
             
-            # Features in exact order:
-            # ['grid', 'qual_position', 'qual_gap_to_pole', 'driver_encoded', ... ]
-            features = np.array([[
-                d['grid'],
-                d.get('qual_position', d['grid']),
-                d.get('qual_gap_to_pole', 0.0),
-                d_encoded,
-                c_encoded,
-                selected_circuit,
-                d['age'],
-                d['driver_pts'],
-                d['driver_wins'],
-                d['constructor_pts'],
-                d['constructor_wins'],
-                d['driver_recent'],
-                d['constructor_recent']
-            ]])
+            st.markdown("#### Predicted Podium Standings")
+            p1 = results_sorted[0] if len(results_sorted) > 0 else None
+            p2 = results_sorted[1] if len(results_sorted) > 1 else None
+            p3 = results_sorted[2] if len(results_sorted) > 2 else None
             
-            prob = model.predict_proba(features)[0][1]
-            results.append({
-                "name": driver_mapping.get(d['driver'], d['driver']),
-                "team": constructor_mapping.get(d['constructor'], d['constructor']),
-                "grid": d['grid'],
-                "probability": prob
-            })
+            p2_html = f"""
+                <div class="podium-card p2">
+                    <div class="rank-badge silver-text">2nd</div>
+                    <div style="font-weight: 700; font-size: 1.2rem;">{p2['name']}</div>
+                    <div style="font-size: 0.85rem; color: #8b9bb4; margin-bottom: 0.5rem;">{p2['team']}</div>
+                    <div style="font-size: 0.85rem;">Started P{p2['grid']}</div>
+                    <div class="probability-badge">{p2['probability']*100:.1f}%</div>
+                </div>
+            """ if p2 else ""
+
+            p1_html = f"""
+                <div class="podium-card p1">
+                    <div class="rank-badge gold-text">1st</div>
+                    <div style="font-weight: 700; font-size: 1.4rem;">{p1['name']}</div>
+                    <div style="font-size: 0.9rem; color: #ffd700; margin-bottom: 0.5rem;">{p1['team']}</div>
+                    <div style="font-size: 0.85rem;">Started P{p1['grid']}</div>
+                    <div class="probability-badge" style="background: rgba(255,215,0,0.15); color: #ffd700;">{p1['probability']*100:.1f}%</div>
+                </div>
+            """ if p1 else ""
+
+            p3_html = f"""
+                <div class="podium-card p3">
+                    <div class="rank-badge bronze-text">3rd</div>
+                    <div style="font-weight: 700; font-size: 1.2rem;">{p3['name']}</div>
+                    <div style="font-size: 0.85rem; color: #8b9bb4; margin-bottom: 0.5rem;">{p3['team']}</div>
+                    <div style="font-size: 0.85rem;">Started P{p3['grid']}</div>
+                    <div class="probability-badge">{p3['probability']*100:.1f}%</div>
+                </div>
+            """ if p3 else ""
             
-        # Sort results by probability descending
-        results_sorted = sorted(results, key=lambda x: x['probability'], reverse=True)
-        
-        # Build a beautiful Podium Standings (P1, P2, P3)
-        st.markdown("#### Predicted Podium Standings")
-        
-        p1 = results_sorted[0] if len(results_sorted) > 0 else None
-        p2 = results_sorted[1] if len(results_sorted) > 1 else None
-        p3 = results_sorted[2] if len(results_sorted) > 2 else None
-        
-        # HTML visualizer for podium cards
-        p2_html = f"""
-            <div class="podium-card p2">
-                <div class="rank-badge silver-text">2nd</div>
-                <div style="font-weight: 700; font-size: 1.2rem;">{p2['name']}</div>
-                <div style="font-size: 0.85rem; color: #8b9bb4; margin-bottom: 0.5rem;">{p2['team']}</div>
-                <div style="font-size: 0.85rem;">Started P{p2['grid']}</div>
-                <div class="probability-badge">{p2['probability']*100:.1f}%</div>
-            </div>
-        """ if p2 else ""
+            st.markdown(f"""
+                <div class="podium-container">
+                    {p2_html}
+                    {p1_html}
+                    {p3_html}
+                </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("#### Full Field Analysis")
+            detailed_df = pd.DataFrame(results_sorted)
+            detailed_df.columns = ["Driver", "Team / Constructor", "Grid Position", "Podium Probability"]
+            detailed_df["Podium Probability"] = detailed_df["Podium Probability"].apply(lambda x: f"{x*100:.1f}%")
+            detailed_df.index = detailed_df.index + 1
+            st.table(detailed_df)
+            
+        else:
+            st.markdown("""
+                <div style="background: rgba(255,255,255,0.01); padding: 5rem 2rem; border-radius: 16px; border: 1px dashed rgba(255,255,255,0.1); text-align: center;">
+                    <span style="font-size: 4rem;">🏎️</span>
+                    <h3 style="color: #8b9bb4; margin-top: 1.5rem; margin-bottom: 0.5rem;">Awaiting Green Flag</h3>
+                    <p style="color: #5c6b84; max-width: 450px; margin: 0 auto;">
+                        Adjust the race starting configurations on the left sidebar, and click <b>Run Race Simulation</b> to calculate podium finish likelihoods for the grid.
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
 
-        p1_html = f"""
-            <div class="podium-card p1">
-                <div class="rank-badge gold-text">1st</div>
-                <div style="font-weight: 700; font-size: 1.4rem;">{p1['name']}</div>
-                <div style="font-size: 0.9rem; color: #ffd700; margin-bottom: 0.5rem;">{p1['team']}</div>
-                <div style="font-size: 0.85rem;">Started P{p1['grid']}</div>
-                <div class="probability-badge" style="background: rgba(255,215,0,0.15); color: #ffd700;">{p1['probability']*100:.1f}%</div>
-            </div>
-        """ if p1 else ""
+with tab2:
+    st.markdown("### 🔧 Pit Stop Lap Predictor")
+    st.markdown("""
+        Predict which lap a driver will make their pit stop based on the circuit, starting grid position, the specific stop number (1st or 2nd), and historical performance.
+    """)
+    
+    col_pit_setup, col_pit_preview = st.columns([1, 2], gap="large")
+    
+    with col_pit_setup:
+        st.markdown("##### 🛠️ Predictor Setup")
+        
+        current_year = st.session_state.get("pit_year", 2024)
+        
+        # Filter tracks dynamically based on selected year (defaulting to 2024 for out of range seasons)
+        races_in_year_pit = races_df[races_df['year'] == current_year]
+        if races_in_year_pit.empty:
+            races_in_year_pit = races_df[races_df['year'] == 2024]
+            
+        circuit_ids_in_year_pit = races_in_year_pit['circuitId'].unique()
+        circuits_in_year_pit_df = circuits_df[circuits_df['circuitId'].isin(circuit_ids_in_year_pit)]
+        circuit_mapping_in_year_pit = circuits_in_year_pit_df.set_index('circuitId')['name'].to_dict()
+        
+        pit_circuit = st.selectbox(
+            "Circuit (Track)",
+            options=list(circuit_mapping_in_year_pit.keys()),
+            format_func=lambda x: f"{circuit_mapping_in_year_pit[x]} ({circuits_df.loc[circuits_df['circuitId'] == x, 'country'].values[0]})",
+            key=f"pit_circuit_{current_year}"
+        )
+        
+        # Preserve selected driver across year changes when the key changes
+        driver_list = list(driver_mapping.keys())
+        prev_driver = st.session_state.get("selected_pit_driver", driver_list[0])
+        try:
+            default_idx = driver_list.index(prev_driver)
+        except ValueError:
+            default_idx = 0
+            
+        pit_driver = st.selectbox(
+            "Driver",
+            options=driver_list,
+            index=default_idx,
+            format_func=lambda x: f"{driver_mapping[x]} ({'Active' if is_driver_active(x, current_year) else 'Retired/Inactive'})",
+            key=f"pit_driver_{current_year}"
+        )
+        st.session_state["selected_pit_driver"] = pit_driver
+        
+        # Auto-fill constructor based on chosen driver (disabled field to prevent editing)
+        # Setting session state before rendering ensures Streamlit reactively updates the value
+        default_pit_const = most_recent_constructor.get(pit_driver, list(constructor_mapping.keys())[0])
+        pit_constructor = default_pit_const
+        st.session_state["pit_constructor_disp"] = constructor_mapping[default_pit_const]
+        st.text_input("Constructor (Team)", disabled=True, key="pit_constructor_disp")
+        
+        # Check driver activity for selected season
+        is_active = is_driver_active(pit_driver, current_year)
+        if not is_active:
+            st.error(f"❌ **Blocked:** {driver_mapping[pit_driver]} is retired/inactive in the {current_year} season. Predictions cannot be computed for inactive drivers in that year.")
+            
+        pit_grid = st.slider("Starting Grid Position", min_value=1, max_value=22, value=1, key="pit_grid")
+        pit_stop_num = st.selectbox("Pit Stop Number", options=[1, 2], format_func=lambda x: f"Stop #{x}", key="pit_stop_num")
+        pit_year = st.number_input("Season / Year", min_value=2018, max_value=2026, value=2024, key="pit_year")
 
-        p3_html = f"""
-            <div class="podium-card p3">
-                <div class="rank-badge bronze-text">3rd</div>
-                <div style="font-weight: 700; font-size: 1.2rem;">{p3['name']}</div>
-                <div style="font-size: 0.85rem; color: #8b9bb4; margin-bottom: 0.5rem;">{p3['team']}</div>
-                <div style="font-size: 0.85rem;">Started P{p3['grid']}</div>
-                <div class="probability-badge">{p3['probability']*100:.1f}%</div>
-            </div>
-        """ if p3 else ""
+    with col_pit_preview:
+        st.markdown("##### 🏁 Prediction Output")
         
-        st.markdown(f"""
-            <div class="podium-container">
-                {p2_html}
-                {p1_html}
-                {p3_html}
-            </div>
-        """, unsafe_allow_html=True)
+        if not is_active:
+            run_prediction = st.button("🔮 Predict Pit Stop Lap", type="primary", disabled=True)
+        else:
+            run_prediction = st.button("🔮 Predict Pit Stop Lap", type="primary")
         
-        # Display full detailed sorted table
-        st.markdown("#### Full Field Analysis")
-        detailed_df = pd.DataFrame(results_sorted)
-        detailed_df.columns = ["Driver", "Team / Constructor", "Grid Position", "Podium Probability"]
-        detailed_df["Podium Probability"] = detailed_df["Podium Probability"].apply(lambda x: f"{x*100:.1f}%")
-        detailed_df.index = detailed_df.index + 1
-        st.table(detailed_df)
-        
-    else:
-        # Instruction state
-        st.markdown("""
-            <div style="background: rgba(255,255,255,0.01); padding: 5rem 2rem; border-radius: 16px; border: 1px dashed rgba(255,255,255,0.1); text-align: center;">
-                <span style="font-size: 4rem;">🏎️</span>
-                <h3 style="color: #8b9bb4; margin-top: 1.5rem; margin-bottom: 0.5rem;">Awaiting Green Flag</h3>
-                <p style="color: #5c6b84; max-width: 450px; margin: 0 auto;">
-                    Adjust the race starting configurations on the left sidebar, and click <b>Run Race Simulation</b> to calculate podium finish likelihoods for the grid.
-                </p>
-            </div>
-        """, unsafe_allow_html=True)
+        if run_prediction:
+            try:
+                driver_name = driver_mapping[pit_driver]
+                constructor_ref = pit_constructor
+                race_name = circuit_mapping[pit_circuit]
+                
+                d_encoded = le_driver_pit.transform([driver_name])[0] if driver_name in le_driver_pit.classes_ else 0
+                c_encoded = le_constructor_pit.transform([constructor_ref])[0] if constructor_ref in le_constructor_pit.classes_ else 0
+                r_encoded = le_race_pit.transform([race_name])[0] if race_name in le_race_pit.classes_ else 0
+                
+                features_pit = np.array([[
+                    d_encoded,
+                    c_encoded,
+                    r_encoded,
+                    pit_grid,
+                    pit_stop_num,
+                    pit_year
+                ]])
+                
+                predicted_lap = int(pit_model.predict(features_pit)[0])
+                total_laps = int(circuit_laps_dict.get(pit_circuit, 58))
+                
+                if predicted_lap > total_laps:
+                    predicted_lap = total_laps - 2
+                if predicted_lap <= 0:
+                    predicted_lap = 10
+                
+                pct = int((predicted_lap / total_laps) * 100)
+                
+                st.markdown(f"""
+                    <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 2rem; text-align: center; margin-top: 1rem;">
+                        <h4 style="margin: 0; color: #8b9bb4;">Predicted Pit Stop Lap</h4>
+                        <div style="font-size: 4.5rem; font-weight: 900; color: #ff1801; margin: 1rem 0;">Lap {predicted_lap}</div>
+                        <p style="color: #c5c6c7; margin-bottom: 1.5rem;">
+                            During the <b>{race_name}</b> ({total_laps} total laps), <b>{driver_name}</b> starting from <b>P{pit_grid}</b> is simulated to pit for <b>Stop #{pit_stop_num}</b> on <b>Lap {predicted_lap}</b>.
+                        </p>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown("##### Stint Length Progress")
+                st.progress(pct / 100)
+                st.caption(f"Lap {predicted_lap} out of {total_laps} total laps ({pct}% of race distance)")
+                
+                st.markdown("##### 💡 Strategy Insights")
+                if pit_stop_num == 1:
+                    if pct < 30:
+                        st.info("🔄 **Aggressive Undercut Strategy**: The pitter is stopping early. Likely starting on Soft tyres looking to swap to Hard/Medium to leapfrog cars ahead.")
+                    elif pct > 50:
+                        st.info("🐢 **Overcut / Long Stint Strategy**: The pitter is running extremely long. Likely started on Hard tyres and seeking to build a tyre age advantage for a late sprint on Soft/Medium.")
+                    else:
+                        st.info("🎯 **Standard Strategy**: The pitter is on a balanced target stint. Standard Medium-to-Hard one-stop strategy window.")
+                else:
+                    st.info("🏁 **Second Stop / Sprint Stint**: The pitter is stopping for a second time, likely moving to a softer compound to complete a fast final stint or reacting to high degradation.")
+                    
+            except Exception as e:
+                st.error(f"Error executing prediction: {e}")
+                
+        else:
+            st.markdown("""
+                <div style="background: rgba(255,255,255,0.01); padding: 5rem 2rem; border-radius: 16px; border: 1px dashed rgba(255,255,255,0.1); text-align: center; margin-top: 1rem;">
+                    <span style="font-size: 4rem;">🔮</span>
+                    <h3 style="color: #8b9bb4; margin-top: 1.5rem; margin-bottom: 0.5rem;">Awaiting Pit Simulation</h3>
+                    <p style="color: #5c6b84; max-width: 450px; margin: 0 auto;">
+                        Adjust the pit stop configuration on the left panel, and click <b>Predict Pit Stop Lap</b> to run the forecast.
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
