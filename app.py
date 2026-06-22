@@ -712,8 +712,7 @@ with tab2:
                 <div style="background: rgba(255,255,255,0.01); padding: 5rem 2rem; border-radius: 16px; border: 1px dashed rgba(255,255,255,0.1); text-align: center; margin-top: 1rem;">
                     <span style="font-size: 4rem;">🔮</span>
                     <h3 style="color: #8b9bb4; margin-top: 1.5rem; margin-bottom: 0.5rem;">Awaiting Pit Simulation</h3>
-                    <p style="color: #5c6b84; max-width: 450px; margin: 0 auto;">
-                        Adjust the pit stop configuration on the left panel, and click <b>Predict Pit Stop Lap</b> to run the forecast.
                     </p>
                 </div>
             """, unsafe_allow_html=True)
+
