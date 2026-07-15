@@ -1,4 +1,4 @@
-# 🏎️ Formula 1 Prediction Hub & Strategy Analytics
+#  Formula 1 Prediction Hub & Strategy Analytics
 
 Welcome to the **Formula 1 Prediction Hub**, an end-to-end data science and machine learning project that simulates F1 race podiums, predicts pit stop strategies, and analyzes historical race telemetry. 
 
@@ -6,19 +6,19 @@ This repository leverages historical data from the **Ergast F1 Dataset** to trai
 
 ---
 
-## 🌟 Key Features
+##  Key Features
 
-### 1. 🏆 Podium Simulator ([app.py](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/app.py) / [train.py](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/train.py))
+### 1.  Podium Simulator ([app.py](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/app.py) / [train.py](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/train.py))
 * **Predictive Engine:** Uses a **Random Forest Classifier** trained on temporal historical F1 data (2000–2021) and validated on 2022+ seasons.
 * **Feature Engineering:** Includes grid position, qualifying performance, gap to pole position, driver age, season cumulative points/wins (for drivers and constructors), and rolling recent form (podiums in the last 3 races).
 * **Interactive Live Simulation:** Set up custom lineups or load actual historical race grids (2020–2024) to estimate the probability of a podium finish (P1, P2, or P3) for each driver on the grid.
 * **Premium UI/UX:** High-fidelity custom-styled podium graphics, driver rankings, and detailed field probability reports.
 
-### 2. 🔧 Pit Stop Lap Predictor
+### 2.  Pit Stop Lap Predictor
 * **Tactical Forecasting:** Predicts the optimal lap for a driver's 1st or 2nd pit stop based on the circuit, starting grid, season, and total race distance.
 * **Strategic Insights:** Automatically detects and displays tactical flags like **Aggressive Undercuts**, **Overcuts/Long Stints**, and **Standard Target Stints**.
 
-### 3. 📊 Advanced Analytics Notebooks
+### 3.  Advanced Analytics Notebooks
 This project contains several Jupyter Notebooks for exploratory data analysis, unsupervised learning, and recommendation algorithms:
 * **[F1_Podium_Prediction.ipynb](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/notebooks/F1_Podium_Prediction.ipynb):** Prototype development and evaluation of the podium prediction classifier.
 * **[Pit_stop_analysis.ipynb](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/notebooks/Pit_stop_analysis.ipynb):** Exploration of historical pit stop durations, lap counts, and model prototyping for pit prediction.
@@ -27,7 +27,7 @@ This project contains several Jupyter Notebooks for exploratory data analysis, u
 
 ---
 
-## 📁 Repository Structure
+##  Repository Structure
 
 ```
 ├── f1 dataset/                   # Folder containing the Ergast CSV files
@@ -58,7 +58,7 @@ This project contains several Jupyter Notebooks for exploratory data analysis, u
 
 ---
 
-## 🛠️ Setup & Installation
+##  Setup & Installation
 
 ### Prerequisites
 Make sure you have Python 3.9+ installed on your system.
@@ -88,7 +88,7 @@ pip install pandas numpy scikit-learn streamlit joblib matplotlib seaborn
 
 ---
 
-## 🚀 Running the Project
+##  Running the Project
 
 ### Start the Streamlit Web Application
 To launch the interactive dashboard, run:
