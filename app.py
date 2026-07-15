@@ -132,28 +132,26 @@ st.markdown("""
         Real-Time Formula 1 Podium Simulations & Strategy Analytics 
     </p>
 </div>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=True)# Import SafeLabelEncoder so joblib can deserialize it
+from utils import load_raw_data, engineer_podium_features, SafeLabelEncoder
 
-# Asset Loader (No cache to prevent stale model versions)
-def load_assets():
-    DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "f1 dataset")
-    
+@st.cache_resource
+def load_models():
     # Load Podium Simulator assets
-    model = joblib.load('f1_podium_model.joblib')
-    le_driver = joblib.load('le_driver.joblib')
-    le_constructor = joblib.load('le_constructor.joblib')
+    model = joblib.load('models/f1_podium_model.joblib')
+    le_driver = joblib.load('models/le_driver.joblib')
+    le_constructor = joblib.load('models/le_constructor.joblib')
     
     # Load Pit Stop Predictor assets
-    pit_model = joblib.load('f1_pit_stop_model.joblib')
-    le_driver_pit = joblib.load('le_driver_pit.joblib')
-    le_constructor_pit = joblib.load('le_constructor_pit.joblib')
-    le_race_pit = joblib.load('le_race_pit.joblib')
-    
-    drivers_df = pd.read_csv(os.path.join(DATA_DIR, "drivers.csv"))
-    constructors_df = pd.read_csv(os.path.join(DATA_DIR, "constructors.csv"))
-    circuits_df = pd.read_csv(os.path.join(DATA_DIR, "circuits.csv"))
-    races_df = pd.read_csv(os.path.join(DATA_DIR, "races.csv"))
-    results_df = pd.read_csv(os.path.join(DATA_DIR, "results.csv"))
+    pit_model = joblib.load('models/f1_pit_stop_model.joblib')
+    le_driver_pit = joblib.load('models/le_driver_pit.joblib')
+    le_constructor_pit = joblib.load('models/le_constructor_pit.joblib')
+    le_race_pit = joblib.load('models/le_race_pit.joblib')
+    return model, le_driver, le_constructor, pit_model, le_driver_pit, le_constructor_pit, le_race_pit
+
+@st.cache_data
+def load_and_process_data(data_dir):
+    results_df, races_df, drivers_df, constructors_df, qualifying_df, circuits_df, _ = load_raw_data(data_dir)
     
     # Filter to only drivers and constructors active from 2020 to 2024
     races_20_24 = races_df[(races_df['year'] >= 2020) & (races_df['year'] <= 2024)]
@@ -193,70 +191,16 @@ def load_assets():
         active_drivers_by_year[y] = set(drivers_df[drivers_df['driverId'].isin(active_driver_ids_y)]['driverRef'])
         
     # Precompute all F1 features for all races (2020-2024)
-    qualifying_df = pd.read_csv(os.path.join(DATA_DIR, "qualifying.csv"))
-    
-    for df_temp in [results_df, races_df, drivers_df, constructors_df, qualifying_df]:
-        df_temp.replace(r'\N', np.nan, inplace=True)
-        df_temp.replace('\\N', np.nan, inplace=True)
-        
-    def time_str_to_seconds(t_str):
-        if pd.isna(t_str) or not isinstance(t_str, str) or t_str.strip() == '' or t_str.strip() == '\\N':
-            return np.nan
-        try:
-            parts = t_str.strip().split(':')
-            if len(parts) == 2:
-                return float(parts[0]) * 60 + float(parts[1])
-            elif len(parts) == 1:
-                return float(parts[0])
-        except:
-            return np.nan
-        return np.nan
-
-    for col in ['q1', 'q2', 'q3']:
-        qualifying_df[col + '_sec'] = qualifying_df[col].apply(time_str_to_seconds)
-    qualifying_df['best_qual_time'] = qualifying_df[['q1_sec', 'q2_sec', 'q3_sec']].min(axis=1)
-    pole_times = qualifying_df.groupby('raceId')['best_qual_time'].transform('min')
-    qualifying_df['qual_gap_to_pole'] = qualifying_df['best_qual_time'] - pole_times
-    
-    results_df['grid'] = pd.to_numeric(results_df['grid'], errors='coerce')
-    results_df['positionOrder'] = pd.to_numeric(results_df['positionOrder'], errors='coerce')
-    results_df['points'] = pd.to_numeric(results_df['points'], errors='coerce')
-    races_df['year'] = pd.to_numeric(races_df['year'], errors='coerce')
-    races_df['round'] = pd.to_numeric(races_df['round'], errors='coerce')
-    races_df['date'] = pd.to_datetime(races_df['date'], errors='coerce')
-    drivers_df['dob'] = pd.to_datetime(drivers_df['dob'], errors='coerce')
-    
-    df_feat = results_df.merge(races_df[['raceId', 'year', 'round', 'circuitId', 'date']], on='raceId', how='inner')
-    df_feat = df_feat.merge(drivers_df[['driverId', 'driverRef', 'dob']], on='driverId', how='inner')
-    df_feat = df_feat.merge(constructors_df[['constructorId', 'constructorRef']], on='constructorId', how='inner')
-    df_feat = df_feat.merge(qualifying_df[['raceId', 'driverId', 'position', 'qual_gap_to_pole']].rename(columns={'position': 'qual_position'}), on=['raceId', 'driverId'], how='left')
-    
-    df_feat['qual_position'] = df_feat['qual_position'].fillna(df_feat['grid'])
-    df_feat['qual_gap_to_pole'] = df_feat['qual_gap_to_pole'].fillna(5.0)
-    
-    df_feat.sort_values(by=['date', 'round', 'positionOrder'], inplace=True)
-    df_feat['podium_finish'] = (df_feat['positionOrder'] <= 3).astype(int)
-    df_feat['driver_age'] = (df_feat['date'] - df_feat['dob']).dt.days / 365.25
-    df_feat['win'] = (df_feat['positionOrder'] == 1).astype(int)
-    
-    df_feat['driver_prior_pts_season'] = df_feat.groupby(['year', 'driverId'])['points'].cumsum() - df_feat['points']
-    df_feat['driver_prior_wins_season'] = df_feat.groupby(['year', 'driverId'])['win'].cumsum() - df_feat['win']
-    
-    df_feat['constructor_prior_pts_season'] = df_feat.groupby(['year', 'constructorId'])['points'].cumsum() - df_feat['points']
-    df_feat['constructor_prior_wins_season'] = df_feat.groupby(['year', 'constructorId'])['win'].cumsum() - df_feat['win']
-    
-    driver_hist = df_feat.sort_values('date').groupby('driverId')
-    df_feat['driver_recent_podiums'] = driver_hist['podium_finish'].shift(1).rolling(3, min_periods=1).sum().fillna(0)
-    
-    const_hist = df_feat.sort_values('date').groupby('constructorId')
-    df_feat['constructor_recent_podiums'] = const_hist['podium_finish'].shift(1).rolling(3, min_periods=1).sum().fillna(0)
-    
+    df_feat = engineer_podium_features(results_df, races_df, drivers_df, constructors_df, qualifying_df)
     df_features = df_feat[(df_feat['year'] >= 2020) & (df_feat['year'] <= 2024)].copy()
         
-    return model, le_driver, le_constructor, pit_model, le_driver_pit, le_constructor_pit, le_race_pit, drivers_df, constructors_df, circuits_df, circuit_laps_dict, most_recent_constructor, active_drivers_by_year, df_features, races_df, results_df
+    return drivers_df, constructors_df, circuits_df, circuit_laps_dict, most_recent_constructor, active_drivers_by_year, df_features, races_df, results_df
+
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "f1 dataset")
 
 try:
-    model, le_driver, le_constructor, pit_model, le_driver_pit, le_constructor_pit, le_race_pit, drivers_df, constructors_df, circuits_df, circuit_laps_dict, most_recent_constructor, active_drivers_by_year, df_features, races_df, results_df = load_assets()
+    model, le_driver, le_constructor, pit_model, le_driver_pit, le_constructor_pit, le_race_pit = load_models()
+    drivers_df, constructors_df, circuits_df, circuit_laps_dict, most_recent_constructor, active_drivers_by_year, df_features, races_df, results_df = load_and_process_data(DATA_DIR)
 except Exception as e:
     st.error(f"Error loading models or dataset files: {e}")
     st.stop()
@@ -660,17 +604,20 @@ with tab2:
                 c_encoded = le_constructor_pit.transform([constructor_ref])[0] if constructor_ref in le_constructor_pit.classes_ else 0
                 r_encoded = le_race_pit.transform([race_name])[0] if race_name in le_race_pit.classes_ else 0
                 
+                total_laps = int(circuit_laps_dict.get(pit_circuit, 58))
+                
                 features_pit = np.array([[
                     d_encoded,
                     c_encoded,
                     r_encoded,
                     pit_grid,
                     pit_stop_num,
-                    pit_year
+                    pit_year,
+                    total_laps
                 ]])
                 
-                predicted_lap = int(pit_model.predict(features_pit)[0])
-                total_laps = int(circuit_laps_dict.get(pit_circuit, 58))
+                predicted_pct = pit_model.predict(features_pit)[0]
+                predicted_lap = int((predicted_pct / 100) * total_laps)
                 
                 if predicted_lap > total_laps:
                     predicted_lap = total_laps - 2
