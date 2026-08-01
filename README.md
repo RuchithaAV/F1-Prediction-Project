@@ -18,7 +18,7 @@ This project explores how machine learning can extract actionable insights from 
 
 ---
 
-## 🎯 Problem Statement
+## Problem Statement
 In Formula 1, predicting outcomes is highly complex due to non-linear variables such as grid position advantages, vehicle reliability, and driver performance trends. 
 
 This project addresses the following questions:
