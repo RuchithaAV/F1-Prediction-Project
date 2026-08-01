@@ -251,7 +251,7 @@ modern_grid_presets = [
 ]
 
 # Organize page into tabs
-tab1, tab2 = st.tabs(["🏆 Podium Simulator", "🔧 Pit Stop Predictor"])
+tab1, tab2, tab3 = st.tabs(["🏆 Podium Simulator", "🔧 Pit Stop Predictor", "📊 Clustering & Analytics"])
 
 with tab1:
     col_setup, col_preview = st.columns([1, 2], gap="large")
@@ -711,4 +711,120 @@ with tab2:
                     </p>
                 </div>
             """, unsafe_allow_html=True)
+
+with tab3:
+    st.markdown("### 📊 Unsupervised Clustering & PCA Analytics")
+    st.markdown("""
+        Explore how drivers and circuits are grouped using **K-Means Clustering** and **Principal Component Analysis (PCA)** based on historical performance metrics.
+    """)
+    
+    sub_tab1, sub_tab2 = st.tabs(["👥 Driver Cohorts", "🏁 Circuit Cohorts"])
+    
+    with sub_tab1:
+        st.markdown("#### F1 Driver Clustering Profiles (2018-2024)")
+        
+        try:
+            drv_features_df = joblib.load("models/driver_features.joblib")
+            
+            # Label mappings
+            cluster_label_map = {
+                3: '🏆 Elite Champions',
+                1: '⭐ Strong Performers', 
+                2: '🔵 Midfield Racers',
+                0: '🟢 Backmarkers'
+            }
+            drv_features_df['cluster_label'] = drv_features_df['cluster'].map(cluster_label_map)
+            
+            available_labels = ['🏆 Elite Champions', '⭐ Strong Performers', '🔵 Midfield Racers', '🟢 Backmarkers']
+            selected_label = st.selectbox("Select Driver Cohort", options=available_labels)
+            
+            # Filter drivers
+            cohort_drivers = drv_features_df[drv_features_df['cluster_label'] == selected_label].copy()
+            
+            # Explanation
+            if "Elite Champions" in selected_label:
+                st.success("🏆 **Elite Champions:** High win and podium rates, dominant finishing positions, and low DNF/retirement rates (e.g. Verstappen, Hamilton, Leclerc).")
+            elif "Strong Performers" in selected_label:
+                st.info("⭐ **Strong Performers:** Highly consistent point scorers and podium finishers supporting elite teams (e.g. Perez, Sainz, Russell).")
+            elif "Midfield Racers" in selected_label:
+                st.warning("🔵 **Midfield Racers:** Standard midfield operators who secure points on occasion but generally operate outside the top-6 podium battles.")
+            else:
+                st.error("🟢 **Backmarkers:** Drivers with lower average finishing positions, higher retirement rates, or shorter F1 career durations.")
+                
+            st.markdown(f"##### Drivers in {selected_label} ({len(cohort_drivers)} total)")
+            
+            # Format and display
+            display_cols = ['driver_name', 'avg_finish_pos', 'avg_grid_pos', 'wins', 'podiums', 'dnf_rate']
+            cohort_display = cohort_drivers[display_cols].copy()
+            cohort_display.columns = ["Driver Name", "Avg Finish Position", "Avg Grid Position", "Total Wins", "Total Podiums", "DNF Rate"]
+            cohort_display["Avg Finish Position"] = cohort_display["Avg Finish Position"].round(2)
+            cohort_display["Avg Grid Position"] = cohort_display["Avg Grid Position"].round(2)
+            cohort_display["DNF Rate"] = cohort_display["DNF Rate"].apply(lambda x: f"{x*100:.1f}%")
+            
+            st.dataframe(cohort_display, use_container_width=True, hide_index=True)
+            
+        except Exception as e:
+            st.error(f"Could not load driver clustering features: {e}")
+            
+    with sub_tab2:
+        st.markdown("#### F1 Circuit Clustering Profiles (2018-2024)")
+        st.markdown("""
+            Circuits are clustered based on race variance, DNF counts, positions gained, and average pit stops:
+        """)
+        
+        # Precomputed list of circuit clusters to avoid heavy calculation in Streamlit run
+        circuit_clusters_precomputed = {
+            "Classic/Established Circuits": [
+                {"name": "Albert Park Grand Prix Circuit", "country": "Australia"},
+                {"name": "Bahrain International Circuit", "country": "Bahrain"},
+                {"name": "Circuit de Barcelona-Catalunya", "country": "Spain"},
+                {"name": "Circuit de Monaco", "country": "Monaco"},
+                {"name": "Silverstone Circuit", "country": "UK"},
+                {"name": "Hungaroring", "country": "Hungary"},
+                {"name": "Autodromo Nazionale di Monza", "country": "Italy"},
+                {"name": "Autódromo José Carlos Pace", "country": "Brazil"},
+                {"name": "Suzuka Circuit", "country": "Japan"},
+                {"name": "Yas Marina Circuit", "country": "UAE"},
+                {"name": "Autódromo Hermanos Rodríguez", "country": "Mexico"},
+                {"name": "Red Bull Ring", "country": "Austria"}
+            ],
+            "Modern/Recent Street Circuits": [
+                {"name": "Istanbul Park", "country": "Turkey"},
+                {"name": "Circuit Gilles Villeneuve", "country": "Canada"},
+                {"name": "Circuit de Spa-Francorchamps", "country": "Belgium"},
+                {"name": "Marina Bay Street Circuit", "country": "Singapore"},
+                {"name": "Shanghai International Circuit", "country": "China"},
+                {"name": "Autodromo Enzo e Dino Ferrari", "country": "Italy"},
+                {"name": "Circuit Paul Ricard", "country": "France"},
+                {"name": "Circuit Park Zandvoort", "country": "Netherlands"},
+                {"name": "Circuit of the Americas", "country": "USA"},
+                {"name": "Sochi Autodrom", "country": "Russia"},
+                {"name": "Baku City Circuit", "country": "Azerbaijan"},
+                {"name": "Jeddah Corniche Circuit", "country": "Saudi Arabia"},
+                {"name": "Losail International Circuit", "country": "Qatar"},
+                {"name": "Miami International Autodrome", "country": "USA"},
+                {"name": "Las Vegas Strip Street Circuit", "country": "United States"}
+            ],
+            "Temporary/COVID Calendar Additions": [
+                {"name": "Hockenheimring", "country": "Germany"},
+                {"name": "Nürburgring", "country": "Germany"},
+                {"name": "Autódromo Internacional do Algarve", "country": "Portugal"},
+                {"name": "Autodromo Internazionale del Mugello", "country": "Italy"}
+            ]
+        }
+        
+        selected_c_cohort = st.selectbox("Select Circuit Cohort", options=list(circuit_clusters_precomputed.keys()))
+        
+        if selected_c_cohort == "Classic/Established Circuits":
+            st.success("🏎️ **Classic/Established Circuits:** Highly-raced tracks with long calendar histories. They accumulate the highest DNF counts and feature consistent pit strategies.")
+        elif selected_c_cohort == "Modern/Recent Street Circuits":
+            st.info("🏙️ **Modern/Recent Street Circuits:** Newer tracks or street circuits with high barrier risks and lower historic race sample sizes.")
+        else:
+            st.warning("☔ **Temporary/COVID Calendar Additions:** Pandemic-era additions with unique strategy patterns or erratic pit stop counts.")
+            
+        c_list = circuit_clusters_precomputed[selected_c_cohort]
+        c_df = pd.DataFrame(c_list)
+        c_df.columns = ["Circuit Track Name", "Country"]
+        st.dataframe(c_df, use_container_width=True, hide_index=True)
+
 
