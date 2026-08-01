@@ -7,7 +7,7 @@ import joblib
 # Set Page Config
 st.set_page_config(
     page_title="F1 Prediction Hub",
-    page_icon="🏆",
+    page_icon="🏎️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -132,7 +132,8 @@ st.markdown("""
         Real-Time Formula 1 Podium Simulations & Strategy Analytics 
     </p>
 </div>
-""", unsafe_allow_html=True)# Import SafeLabelEncoder so joblib can deserialize it
+""", unsafe_allow_html=True)
+# Import SafeLabelEncoder so joblib can deserialize it
 from utils import load_raw_data, engineer_podium_features, SafeLabelEncoder
 
 @st.cache_resource
@@ -251,13 +252,13 @@ modern_grid_presets = [
 ]
 
 # Organize page into tabs
-tab1, tab2, tab3 = st.tabs(["🏆 Podium Simulator", "🔧 Pit Stop Predictor", "📊 Clustering & Analytics"])
+tab1, tab2, tab3 = st.tabs(["Podium Simulator", "Pit Stop Predictor", "Clustering & Analytics"])
 
 with tab1:
     col_setup, col_preview = st.columns([1, 2], gap="large")
     
     with col_setup:
-        st.markdown("### 🛠️ Podium Simulation Setup")
+        st.markdown("### Podium Simulation Setup")
         
         # Season selection
         podium_year = st.selectbox(
@@ -320,7 +321,7 @@ with tab1:
         
         if lineup_type == "Default Grid Preset (Actual Grid)":
             if not presets_list:
-                st.warning("⚠️ No historical grid data available for this race.")
+                st.warning(" No historical grid data available for this race.")
             else:
                 for idx, preset in enumerate(presets_list):
                     default_grid_val = int(preset['grid'])
@@ -430,7 +431,7 @@ with tab1:
         # Warning notice for inactive/retired drivers
         inactive_drivers = [driver_mapping.get(d['driver'], d['driver']) for d in drivers_to_simulate if not is_driver_active(d['driver'], podium_year)]
         if inactive_drivers:
-            st.warning(f"⚠️ **Retired/Inactive Drivers Selected:** {', '.join(inactive_drivers)} did not race in the {podium_year} season. Simulations for these drivers will rely on historical extrapolation.")
+            st.warning(f"**Retired/Inactive Drivers Selected:** {', '.join(inactive_drivers)} did not race in the {podium_year} season. Simulations for these drivers will rely on historical extrapolation.")
 
         # Update availability placeholder dynamically
         grid_positions = [d['grid'] for d in drivers_to_simulate]
@@ -440,12 +441,12 @@ with tab1:
         available_positions = sorted(list(all_positions - taken_positions))
         
         if available_positions:
-            availability_placeholder.info(f"📋 **Available Starting Slots:** {', '.join(['P'+str(p) for p in available_positions])}")
+            availability_placeholder.info(f"**Available Starting Slots:** {', '.join(['P'+str(p) for p in available_positions])}")
         else:
-            availability_placeholder.success(f"✅ **All starting slots (P1 to P{total_slots}) successfully assigned!**")
+            availability_placeholder.success(f"**All starting slots (P1 to P{total_slots}) successfully assigned!**")
 
     with col_preview:
-        st.markdown("### 🏁 Live Simulation & Forecast Results")
+        st.markdown("### Live Simulation & Forecast Results")
         st.write("")
         
         # Check for duplicate grid positions
@@ -453,10 +454,10 @@ with tab1:
         duplicate_grids = sorted(list(set([g for g in grid_positions if grid_positions.count(g) > 1])))
         
         if duplicate_grids:
-            st.warning(f"⚠️ **Duplicate Grid Positions Detected!** Positions {', '.join(['P'+str(g) for g in duplicate_grids])} are assigned to multiple drivers.")
-            sim_clicked = st.button("🏁 Run Race Simulation", type="primary", disabled=True)
+            st.warning(f"**Duplicate Grid Positions Detected!** Positions {', '.join(['P'+str(g) for g in duplicate_grids])} are assigned to multiple drivers.")
+            sim_clicked = st.button("Run Race Simulation", type="primary", disabled=True)
         else:
-            sim_clicked = st.button("🏁 Run Race Simulation", type="primary")
+            sim_clicked = st.button("Run Race Simulation", type="primary")
         
         if sim_clicked and drivers_to_simulate:
             # Run predictions for all drivers
@@ -550,7 +551,7 @@ with tab1:
             
             # Display Feature Importance and model stats Expander
             if os.path.exists('models/feature_importance.png'):
-                with st.expander("📊 Model Insights & Feature Importance", expanded=False):
+                with st.expander("Model Insights & Feature Importance", expanded=False):
                     st.image('models/feature_importance.png', caption='Podium Predictor Feature Importance Breakdown')
                     st.markdown("""
                     **Model Performance Summary:**
@@ -565,7 +566,7 @@ with tab1:
         else:
             st.markdown("""
                 <div style="background: rgba(255,255,255,0.01); padding: 5rem 2rem; border-radius: 16px; border: 1px dashed rgba(255,255,255,0.1); text-align: center;">
-                    <span style="font-size: 4rem;">🏎️</span>
+                    <span style="font-size: 4rem;">🏁</span>
                     <h3 style="color: #8b9bb4; margin-top: 1.5rem; margin-bottom: 0.5rem;">Awaiting Green Flag</h3>
                     <p style="color: #5c6b84; max-width: 450px; margin: 0 auto;">
                         Adjust the race starting configurations on the left sidebar, and click <b>Run Race Simulation</b> to calculate podium finish likelihoods for the grid.
@@ -574,7 +575,7 @@ with tab1:
             """, unsafe_allow_html=True)
 
 with tab2:
-    st.markdown("### 🔧 Pit Stop Lap Predictor")
+    st.markdown("### Pit Stop Lap Predictor")
     st.markdown("""
         Predict which lap a driver will make their pit stop based on the circuit, starting grid position, the specific stop number (1st or 2nd), and historical performance.
     """)
@@ -582,7 +583,7 @@ with tab2:
     col_pit_setup, col_pit_preview = st.columns([1, 2], gap="large")
     
     with col_pit_setup:
-        st.markdown("##### 🛠️ Predictor Setup")
+        st.markdown("##### Predictor Setup")
         
         current_year = st.session_state.get("pit_year", 2024)
         
@@ -629,19 +630,19 @@ with tab2:
         # Check driver activity for selected season
         is_active = is_driver_active(pit_driver, current_year)
         if not is_active:
-            st.error(f"❌ **Blocked:** {driver_mapping[pit_driver]} is retired/inactive in the {current_year} season. Predictions cannot be computed for inactive drivers in that year.")
+            st.error(f" **Blocked:** {driver_mapping[pit_driver]} is retired/inactive in the {current_year} season. Predictions cannot be computed for inactive drivers in that year.")
             
         pit_grid = st.slider("Starting Grid Position", min_value=1, max_value=22, value=1, key="pit_grid")
         pit_stop_num = st.selectbox("Pit Stop Number", options=[1, 2], format_func=lambda x: f"Stop #{x}", key="pit_stop_num")
         pit_year = st.number_input("Season / Year", min_value=2018, max_value=2026, value=2024, key="pit_year")
 
     with col_pit_preview:
-        st.markdown("##### 🏁 Prediction Output")
+        st.markdown("##### Prediction Output")
         
         if not is_active:
-            run_prediction = st.button("🔮 Predict Pit Stop Lap", type="primary", disabled=True)
+            run_prediction = st.button("Predict Pit Stop Lap", type="primary", disabled=True)
         else:
-            run_prediction = st.button("🔮 Predict Pit Stop Lap", type="primary")
+            run_prediction = st.button("Predict Pit Stop Lap", type="primary")
         
         if run_prediction:
             try:
@@ -689,16 +690,16 @@ with tab2:
                 st.progress(pct / 100)
                 st.caption(f"Lap {predicted_lap} out of {total_laps} total laps ({pct}% of race distance)")
                 
-                st.markdown("##### 💡 Strategy Insights")
+                st.markdown("#####  Strategy Insights")
                 if pit_stop_num == 1:
                     if pct < 30:
-                        st.info("🔄 **Aggressive Undercut Strategy**: The pitter is stopping early. Likely starting on Soft tyres looking to swap to Hard/Medium to leapfrog cars ahead.")
+                        st.info("**Aggressive Undercut Strategy**: The pitter is stopping early. Likely starting on Soft tyres looking to swap to Hard/Medium to leapfrog cars ahead.")
                     elif pct > 50:
-                        st.info("🐢 **Overcut / Long Stint Strategy**: The pitter is running extremely long. Likely started on Hard tyres and seeking to build a tyre age advantage for a late sprint on Soft/Medium.")
+                        st.info("**Overcut / Long Stint Strategy**: The pitter is running extremely long. Likely started on Hard tyres and seeking to build a tyre age advantage for a late sprint on Soft/Medium.")
                     else:
-                        st.info("🎯 **Standard Strategy**: The pitter is on a balanced target stint. Standard Medium-to-Hard one-stop strategy window.")
+                        st.info("**Standard Strategy**: The pitter is on a balanced target stint. Standard Medium-to-Hard one-stop strategy window.")
                 else:
-                    st.info("🏁 **Second Stop / Sprint Stint**: The pitter is stopping for a second time, likely moving to a softer compound to complete a fast final stint or reacting to high degradation.")
+                    st.info("**Second Stop / Sprint Stint**: The pitter is stopping for a second time, likely moving to a softer compound to complete a fast final stint or reacting to high degradation.")
                     
             except Exception as e:
                 st.error(f"Error executing prediction: {e}")
@@ -706,19 +707,19 @@ with tab2:
         else:
             st.markdown("""
                 <div style="background: rgba(255,255,255,0.01); padding: 5rem 2rem; border-radius: 16px; border: 1px dashed rgba(255,255,255,0.1); text-align: center; margin-top: 1rem;">
-                    <span style="font-size: 4rem;">🔮</span>
+                    <span style="font-size: 4rem;">⏱️</span>
                     <h3 style="color: #8b9bb4; margin-top: 1.5rem; margin-bottom: 0.5rem;">Awaiting Pit Simulation</h3>
                     </p>
                 </div>
             """, unsafe_allow_html=True)
 
 with tab3:
-    st.markdown("### 📊 Unsupervised Clustering & PCA Analytics")
+    st.markdown("### Unsupervised Clustering & PCA Analytics")
     st.markdown("""
         Explore how drivers and circuits are grouped using **K-Means Clustering** and **Principal Component Analysis (PCA)** based on historical performance metrics.
     """)
     
-    sub_tab1, sub_tab2 = st.tabs(["👥 Driver Cohorts", "🏁 Circuit Cohorts"])
+    sub_tab1, sub_tab2 = st.tabs(["Driver Cohorts", "Circuit Cohorts"])
     
     with sub_tab1:
         st.markdown("#### F1 Driver Clustering Profiles (2018-2024)")
@@ -728,14 +729,14 @@ with tab3:
             
             # Label mappings
             cluster_label_map = {
-                3: '🏆 Elite Champions',
-                1: '⭐ Strong Performers', 
-                2: '🔵 Midfield Racers',
-                0: '🟢 Backmarkers'
+                3: 'Elite Champions',
+                1: 'Strong Performers', 
+                2: 'Midfield Racers',
+                0: 'Backmarkers'
             }
             drv_features_df['cluster_label'] = drv_features_df['cluster'].map(cluster_label_map)
             
-            available_labels = ['🏆 Elite Champions', '⭐ Strong Performers', '🔵 Midfield Racers', '🟢 Backmarkers']
+            available_labels = ['Elite Champions', 'Strong Performers', 'Midfield Racers', 'Backmarkers']
             selected_label = st.selectbox("Select Driver Cohort", options=available_labels)
             
             # Filter drivers
@@ -743,13 +744,13 @@ with tab3:
             
             # Explanation
             if "Elite Champions" in selected_label:
-                st.success("🏆 **Elite Champions:** High win and podium rates, dominant finishing positions, and low DNF/retirement rates (e.g. Verstappen, Hamilton, Leclerc).")
+                st.success("**Elite Champions:** High win and podium rates, dominant finishing positions, and low DNF/retirement rates (e.g. Verstappen, Hamilton, Leclerc).")
             elif "Strong Performers" in selected_label:
-                st.info("⭐ **Strong Performers:** Highly consistent point scorers and podium finishers supporting elite teams (e.g. Perez, Sainz, Russell).")
+                st.info("**Strong Performers:** Highly consistent point scorers and podium finishers supporting elite teams (e.g. Perez, Sainz, Russell).")
             elif "Midfield Racers" in selected_label:
-                st.warning("🔵 **Midfield Racers:** Standard midfield operators who secure points on occasion but generally operate outside the top-6 podium battles.")
+                st.warning("**Midfield Racers:** Standard midfield operators who secure points on occasion but generally operate outside the top-6 podium battles.")
             else:
-                st.error("🟢 **Backmarkers:** Drivers with lower average finishing positions, higher retirement rates, or shorter F1 career durations.")
+                st.error("**Backmarkers:** Drivers with lower average finishing positions, higher retirement rates, or shorter F1 career durations.")
                 
             st.markdown(f"##### Drivers in {selected_label} ({len(cohort_drivers)} total)")
             
@@ -816,11 +817,11 @@ with tab3:
         selected_c_cohort = st.selectbox("Select Circuit Cohort", options=list(circuit_clusters_precomputed.keys()))
         
         if selected_c_cohort == "Classic/Established Circuits":
-            st.success("🏎️ **Classic/Established Circuits:** Highly-raced tracks with long calendar histories. They accumulate the highest DNF counts and feature consistent pit strategies.")
+            st.success("**Classic/Established Circuits:** Highly-raced tracks with long calendar histories. They accumulate the highest DNF counts and feature consistent pit strategies.")
         elif selected_c_cohort == "Modern/Recent Street Circuits":
-            st.info("🏙️ **Modern/Recent Street Circuits:** Newer tracks or street circuits with high barrier risks and lower historic race sample sizes.")
+            st.info("**Modern/Recent Street Circuits:** Newer tracks or street circuits with high barrier risks and lower historic race sample sizes.")
         else:
-            st.warning("☔ **Temporary/COVID Calendar Additions:** Pandemic-era additions with unique strategy patterns or erratic pit stop counts.")
+            st.warning("**Temporary/COVID Calendar Additions:** Pandemic-era additions with unique strategy patterns or erratic pit stop counts.")
             
         c_list = circuit_clusters_precomputed[selected_c_cohort]
         c_df = pd.DataFrame(c_list)
