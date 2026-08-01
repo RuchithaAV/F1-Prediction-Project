@@ -102,8 +102,8 @@ The predictive system utilizes two primary models optimized for their respective
 ### 3. Unsupervised Clustering Models
 * **Algorithm:** K-Means Clustering & Principal Component Analysis (PCA)
 * **Objective:** 
-  * Classify drivers based on longevity, career wins, average grid positions, and points efficiency.
-  * Cluster circuits based on altitude, layout speeds, average lap counts, and configuration styles.
+  * **Cluster Drivers** based on average finishing positions, grid ranks, points accumulation, and DNF rates into four distinct cohorts (*Elite Champions*, *Strong Performers*, *Midfield Racers*, and *Backmarkers*).
+  * **Cluster Circuits** based on layout characteristics, average pit stops, DNF ratios, and historic calendars into three distinct cohorts (*Classic/Established Circuits*, *Modern/Recent Street Circuits*, and *Temporary/COVID Calendar Additions*).
 
 ---
 
