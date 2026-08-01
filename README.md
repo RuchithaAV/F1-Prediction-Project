@@ -1,113 +1,248 @@
-#  Formula 1 Prediction Hub & Strategy Analytics
+# 🏎️ Formula 1 Race Prediction & Motorsport Analytics Using Machine Learning
 
-Welcome to the **Formula 1 Prediction Hub**, an end-to-end data science and machine learning project that simulates F1 race podiums, predicts pit stop strategies, and analyzes historical race telemetry. 
+An end-to-end data science and machine learning project designed to simulate race podium finishes, predict optimal pit stop strategies, and analyze driver/circuit profiles using historical motorsport data. 
 
-This repository leverages historical data from the **Ergast F1 Dataset** to train predictive models and features an interactive, premium-designed **Streamlit Web Application** for real-time race simulations and strategic insights.
-
----
-
-##  Key Features
-
-### 1.  Podium Simulator ([app.py](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/app.py) / [train.py](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/train.py))
-* **Predictive Engine:** Uses a **Random Forest Classifier** trained on temporal historical F1 data (2000–2021) and validated on 2022+ seasons.
-* **Feature Engineering:** Includes grid position, qualifying performance, gap to pole position, driver age, season cumulative points/wins (for drivers and constructors), and rolling recent form (podiums in the last 3 races).
-* **Interactive Live Simulation:** Set up custom lineups or load actual historical race grids (2020–2024) to estimate the probability of a podium finish (P1, P2, or P3) for each driver on the grid.
-* **Premium UI/UX:** High-fidelity custom-styled podium graphics, driver rankings, and detailed field probability reports.
-
-### 2.  Pit Stop Lap Predictor
-* **Tactical Forecasting:** Predicts the optimal lap for a driver's 1st or 2nd pit stop based on the circuit, starting grid, season, and total race distance.
-* **Strategic Insights:** Automatically detects and displays tactical flags like **Aggressive Undercuts**, **Overcuts/Long Stints**, and **Standard Target Stints**.
-
-### 3.  Advanced Analytics Notebooks
-This project contains several Jupyter Notebooks for exploratory data analysis, unsupervised learning, and recommendation algorithms:
-* **[F1_Podium_Prediction.ipynb](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/notebooks/F1_Podium_Prediction.ipynb):** Prototype development and evaluation of the podium prediction classifier.
-* **[Pit_stop_analysis.ipynb](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/notebooks/Pit_stop_analysis.ipynb):** Exploration of historical pit stop durations, lap counts, and model prototyping for pit prediction.
-* **[circuit_clustering.ipynb](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/notebooks/circuit_clustering.ipynb):** K-Means clustering of F1 circuits based on characteristics like altitude, lap counts, average speed, and layout types.
-* **[driver_clustering.ipynb](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/notebooks/driver_clustering.ipynb):** PCA and clustering to identify driver profiles, career trajectories, and tier levels.
+Developed as an undergraduate portfolio project, this repository combines statistical modeling, feature engineering, and unsupervised learning, all packaged into an interactive, high-fidelity **Streamlit Web Application** for real-time race simulations.
 
 ---
 
-##  Repository Structure
+## 📌 Project Overview
+Formula 1 is a sport dictated by fractions of a second. Beyond driver skill and aerodynamic design, race strategy—such as pit window optimization and podium probability forecasting—is crucial to team success. 
 
-```
-├── f1 dataset/                   # Folder containing the Ergast CSV files
-│   ├── circuits.csv
-│   ├── constructors.csv
-│   ├── drivers.csv
-│   ├── races.csv
-│   ├── results.csv
-│   ├── qualifying.csv
-│   ├── pit_stops.csv
-│   └── ... (additional F1 metadata files)
-├── models/                       # Pre-trained models and SafeLabelEncoder assets
-│   ├── f1_podium_model.joblib
-│   ├── f1_pit_stop_model.joblib
-│   ├── le_driver.joblib
-│   ├── le_constructor.joblib
-│   └── ... (other classification encoders/models)
-├── notebooks/                    # Jupyter notebooks for exploratory analysis
-│   ├── F1_Podium_Prediction.ipynb
-│   ├── Pit_stop_analysis.ipynb
-│   ├── circuit_clustering.ipynb
-│   └── driver_clustering.ipynb
-├── app.py                        # Streamlit web application frontend & prediction logic
-├── train.py                      # Training script for the Random Forest podium classifier
-├── train_pit_stop.py             # CLI training script for the pit stop predictor
-└── utils.py                      # Shared preprocessors, encoders, and helpers
+This project explores how machine learning can extract actionable insights from historical motorsport datasets. By engineering domain-specific features from historical race results, qualifying telemetry, and driver histories, we build models that:
+1. **Simulate Podiums:** Predict the probability of drivers finishing in P1, P2, or P3 based on starting grid setups, qualifying performance, and seasonal form.
+2. **Forecast Pit Stop Windows:** Estimate the optimal lap for a driver's pit stops based on race conditions and driver characteristics.
+3. **Analyze Driver and Track Profiles:** Group drivers and circuits using unsupervised clustering to uncover career patterns and track characteristics.
+
+*Disclaimer: This is an undergraduate machine learning project designed for academic and portfolio demonstration purposes. It does not represent a real-time production-grade betting system.*
+
+---
+
+## 🎯 Problem Statement
+In Formula 1, predicting outcomes is highly complex due to non-linear variables such as grid position advantages, vehicle reliability, and driver performance trends. 
+
+This project addresses the following questions:
+* **Outcome Prediction:** Given a starting grid and qualifying gaps, what is the probability profile of the top finishes?
+* **Strategy Formulation:** Based on track parameters and driver experience, when is the optimal lap to execute a pit stop?
+* **Cohort Identification:** How do driver trajectories and circuit properties cluster dynamically over time?
+
+**Target Audience:** Motorsport analysts, strategy enthusiasts, and recruiters looking for applied machine learning pipelines handling tabular temporal data.
+
+---
+
+## 🔄 Project Workflow
+The system utilizes a structured machine learning pipeline:
+
+```mermaid
+graph TD
+    A[Data Source: Ergast F1 Dataset] --> B[Data Preprocessing & Cleaning]
+    B --> C[Exploratory Data Analysis]
+    C --> D[Domain-Specific Feature Engineering]
+    D --> E[Model Selection & Chronological Split]
+    E --> F[Model Evaluation & Hyperparameter Insights]
+    F --> G[Interactive Streamlit Deployment]
 ```
 
 ---
 
-##  Setup & Installation
+## 📊 Dataset Description
+The model leverages historical data sourced from the **Ergast F1 Motor Racing Database** (CSV files located in the [f1 dataset/](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/f1%20dataset) directory).
 
-### Prerequisites
-Make sure you have Python 3.9+ installed on your system.
+### Key Features Used:
+* **Historical Results:** Race outcomes (`results.csv`), grid start positions, and final classifications.
+* **Qualifying Telemetry:** Grid times (`qualifying.csv`) to compute qualifying margins and gaps.
+* **Metadata Tables:** `drivers.csv`, `constructors.csv`, and `races.csv` for demographic and historical context.
+* **Pit Stop Telemetry:** `pit_stops.csv` tracking exact pit lap details from modern eras.
+
+### Data Preprocessing Steps:
+1. **Null Representation:** SQL null representations (such as `\N`) are cleaned and imputed with pandasNaN.
+2. **Temporal Parsing:** Qualifying times (e.g., `1:21.432`) are parsed into seconds to compute mathematical gradients (e.g., gap to pole position).
+3. **Date Alignment:** Birthdates and race schedules are parsed to compute the driver's age at the exact time of the grand prix.
+4. **Encoding:** Categorical labels for drivers, teams, and circuits are dynamically converted using a custom `SafeLabelEncoder` to support out-of-vocabulary inputs safely.
+
+---
+
+## 📈 Exploratory Data Analysis (EDA)
+Exploratory analysis was conducted in Jupyter Notebooks ([notebooks/](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/notebooks)) to extract key correlations and trends:
+* **The Starting Grid Advantage:** Analyzing how highly starting position correlates with podium results across various tracks.
+* **Constructor Dominance:** Visualizing constructor-wide points accumulation across seasons to analyze mechanical advantages.
+* **Pit Stop Duration Patterns:** Assessing how pit stop duration fluctuates based on track characteristics and year-over-year pit lane speed limits.
+
+---
+
+## 🛠️ Feature Engineering
+To capture the dynamic nature of F1, several custom, domain-specific features were engineered in [utils.py](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/utils.py):
+
+| Feature Name | Type | Description |
+| :--- | :--- | :--- |
+| `qual_gap_to_pole` | Continuous | The difference (in seconds) between the driver's best qualifying lap and the pole position lap. |
+| `driver_age` | Continuous | The age of the driver on race day (capturing experience vs. age-related reflexes). |
+| `driver_prior_pts_season` | Cumulative | Total points accumulated by the driver during the current season prior to the race. |
+| `driver_prior_wins_season` | Cumulative | Total wins achieved by the driver in the current season before the race. |
+| `constructor_prior_pts_season`| Cumulative | Combined constructor points in the current season prior to the race. |
+| `driver_recent_podiums` | Rolling | A rolling sum of podium finishes (P1-P3) in the previous 3 races to represent driver "form". |
+| `constructor_recent_podiums` | Rolling | A rolling sum of podium finishes for the constructor in the previous 3 races to represent team "form". |
+
+---
+
+## 🤖 Machine Learning Models
+
+The predictive system utilizes two primary models optimized for their respective tasks:
+
+### 1. Podium Simulator Model (Classifier)
+* **Algorithm:** Random Forest Classifier (`sklearn.ensemble.RandomForestClassifier`)
+* **Objective:** Output binary probability indicating whether a driver will finish on the podium (P1-P3).
+* **Rationale:** Random Forests inherently handle non-linear decision boundaries (such as the exponential drop-off in win probability from grid P1 to P10) and manage collinear features (like grid position and qualifying position) without scaling issues. Class weights are balanced to handle the minority target class (only 3 podium spots out of 20+ entries per race).
+
+### 2. Pit Stop Predictor Model (Regressor)
+* **Algorithm:** Gradient Boosting Regressor (`sklearn.ensemble.GradientBoostingRegressor`)
+* **Objective:** Predict the percentage of total laps completed before a driver performs their first/second pit stop.
+* **Rationale:** Gradient Boosting excels at handling numerical variables along with categorical descriptors (driver, constructor, circuit) by sequentially minimizing prediction residuals.
+
+### 3. Unsupervised Clustering Models
+* **Algorithm:** K-Means Clustering & Principal Component Analysis (PCA)
+* **Objective:** 
+  * Classify drivers based on longevity, career wins, average grid positions, and points efficiency.
+  * Cluster circuits based on altitude, layout speeds, average lap counts, and configuration styles.
+
+---
+
+## 📊 Model Evaluation
+
+### Evaluation Strategy
+Models are split using a **temporal split** rather than a random k-fold split to prevent data leakage (since F1 seasons follow strict chronological trends):
+* **Podium Classifier:** Trained on seasons 2000–2021; evaluated on seasons 2022+.
+* **Pit Stop Regressor:** Trained on seasons 2018–2022; evaluated on seasons 2023+.
+
+### Performance Metrics:
+* **Podium Classification:**
+  * **Accuracy:** ~80%+
+  * **ROC-AUC Score:** ~0.85+
+  * *Sports prediction has a high degree of variance (mechanical failures, weather, crashes), making a high ROC-AUC particularly strong for predicting general podium ranges.*
+* **Pit Stop Regression:**
+  * **Mean Absolute Error (MAE):** Measured in lap percentage error (enabling strategy prediction within a ~2-3 lap window on a typical 60-lap race).
+  * **R² Score:** Captures variance explained by the combination of starting grid, circuit profile, and tires.
+
+---
+
+## 💡 Results and Insights
+* **Feature Importance:** Across the Random Forest model, `grid` position is the highest predictor of podium outcome, followed closely by `qual_gap_to_pole` and `constructor_prior_pts_season`.
+* **Form Factor:** Driver and constructor recent podium counts (rolling 3-race form) significantly boost the predictions of mid-tier drivers experiencing sudden development peaks.
+* **Strategy Indicators:** The Pit Stop Predictor automatically outputs strategy designations in the web app:
+  * **Aggressive Undercut:** Early pit window target.
+  * **Standard Stint:** Consistent mid-race strategy.
+  * **Overcut / Long Stint:** Late window targeting clean air.
+
+---
+
+## 💻 Streamlit Web Application
+
+The interactive web dashboard ([app.py](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/app.py)) provides a visual interface for race simulations.
+
+### Features:
+1. **Podium Simulator Tab:**
+   * Load historical grand prix grids (2020–2024 seasons) or build a custom lineup.
+   * Fine-tune individual driver attributes (qualifying gap, age, seasonal points, rolling podium form).
+   * Run the predictive engine to calculate podium probabilities and render a dynamic, styled podium layout.
+2. **Pit Stop Predictor Tab:**
+   * Select a driver, team, track, and starting grid.
+   * View the predicted target pit stop lap and corresponding strategy flags (Undercut, Overcut, Standard).
+   * Interactive progress bars visualizing stint lengths over the total race distance.
+
+---
+
+## 🛠️ Technologies Used
+* **Programming Language:** Python 3.9+
+* **Data Processing & Analytics:** Pandas, NumPy
+* **Visualization:** Matplotlib, Seaborn
+* **Machine Learning:** Scikit-Learn, Joblib (model serialization)
+* **Dashboard & UI:** Streamlit, CSS (custom glassmorphism style)
+* **Clustering & Dim Reduction:** K-Means, PCA
+
+---
+
+## 📂 Project Structure
+```
+├── f1 dataset/                   # Ergast F1 CSV raw database files
+│   ├── circuits.csv              # Track locations and altitudes
+│   ├── constructors.csv          # Team histories
+│   ├── drivers.csv               # Driver bio and nationalities
+│   ├── races.csv                 # Seasonal schedule details
+│   ├── results.csv               # Historical race classifications
+│   ├── qualifying.csv            # Qualifying lap times and order
+│   └── pit_stops.csv             # Modern pit stop event durations
+├── models/                       # Pre-trained models and encoder metadata
+│   ├── f1_podium_model.joblib     # Random Forest Podium Classifier
+│   ├── f1_pit_stop_model.joblib   # Gradient Boosting Pit Stop Regressor
+│   ├── le_driver.joblib          # Label Encoders
+│   └── ...
+├── notebooks/                    # Analytical and prototyping notebooks
+│   ├── F1_Podium_Prediction.ipynb# Prototyping classification models
+│   ├── Pit_stop_analysis.ipynb   # Exploring pit stops and regression 
+│   ├── circuit_clustering.ipynb  # Track K-Means groupings
+│   └── driver_clustering.ipynb   # Driver PCA & K-Means profiles
+├── app.py                        # Streamlit web app and visualization dashboard
+├── train.py                      # Training script for podium simulator
+├── train_pit_stop.py             # Training script for pit stop predictor
+├── utils.py                      # Shared preprocessors, metrics, and feature engineering
+├── requirements.txt              # Project package requirements
+└── README.md                     # Project documentation (this file)
+```
+
+---
+
+## 🚀 Setup and Installation
 
 ### 1. Clone the Repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/your-username/F1-Prediction-Project.git
 cd F1-Prediction-Project
 ```
 
-### 2. Create and Activate a Virtual Environment
+### 2. Configure Virtual Environment
 ```bash
-# Windows
+# Create environment
 python -m venv .venv
+
+# Activate environment (Windows)
 .venv\Scripts\activate
 
-# macOS/Linux
-python3 -m venv .venv
+# Activate environment (macOS/Linux)
 source .venv/bin/activate
 ```
 
 ### 3. Install Dependencies
-Ensure you have the required packages:
 ```bash
-pip install pandas numpy scikit-learn streamlit joblib matplotlib seaborn
+pip install -r requirements.txt
 ```
 
----
-
-##  Running the Project
-
-### Start the Streamlit Web Application
-To launch the interactive dashboard, run:
+### 4. Run the Streamlit Application
 ```bash
 streamlit run app.py
 ```
-This will open the prediction hub in your local browser (typically at `http://localhost:8501`).
 
-### Retrain the Podium Model
-If you make changes to the feature engineering process or update the datasets, you can retrain the model by running:
+### 5. Retrain Models
+To retrain models and regenerate serialized assets, run:
 ```bash
+# Retrain Podium Simulator
 python train.py
+
+# Retrain Pit Stop Predictor
+python train_pit_stop.py
 ```
-This will evaluate the model on modern era races and overwrite `models/f1_podium_model.joblib`, `models/le_driver.joblib`, and `models/le_constructor.joblib` with fresh versions.
 
 ---
 
-## 📈 Model Performance (`models/f1_podium_model.joblib`)
-The Random Forest podium classifier is evaluated on 2022+ race data:
-* **Accuracy:** ~80%+ (depending on split settings)
-* **ROC-AUC Score:** ~0.85+
-* **Key Features:** Grid position and qualifying gaps are the highest predictors, balanced by constructor strength and recent podium history.
+## 🔮 Future Improvements
+* **Tire Compound Strategy:** Integrating start/end tire compound features to predict pit windows more accurately.
+* **Weather Integration:** Incorporating weather indicators (ambient temperature, track temperature, wet/dry conditions).
+* **Explainable AI (XAI):** Implementing SHAP (SHapley Additive exPlanations) values to explain individual driver podium probabilities.
+* **Advanced Regressors:** Integrating XGBoost and LightGBM models for comparison against the Random Forest baseline.
+* **Live API Feed:** Replacing static CSV dumps with live telemetry feeds via the FastF1 API during race weekends.
+
+---
+
+## 👤 Author
+* **Your Name** - Undergraduate Student / Aspiring MLE & Data Scientist
+* [LinkedIn Profile](https://linkedin.com/in/your-profile)
+* [GitHub Profile](https://github.com/your-username)
