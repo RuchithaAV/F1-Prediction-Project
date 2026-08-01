@@ -1,4 +1,4 @@
-# 🏎️ Formula 1 Race Prediction & Motorsport Analytics Using Machine Learning
+# Formula 1 Race Prediction & Motorsport Analytics Using Machine Learning
 
 An end-to-end data science and machine learning project designed to simulate race podium finishes, predict optimal pit stop strategies, and analyze driver/circuit profiles using historical motorsport data. 
 
@@ -6,7 +6,7 @@ Developed as an undergraduate portfolio project, this repository combines statis
 
 ---
 
-## 📌 Project Overview
+##  Project Overview
 Formula 1 is a sport dictated by fractions of a second. Beyond driver skill and aerodynamic design, race strategy—such as pit window optimization and podium probability forecasting—is crucial to team success. 
 
 This project explores how machine learning can extract actionable insights from historical motorsport datasets. By engineering domain-specific features from historical race results, qualifying telemetry, and driver histories, we build models that:
@@ -30,7 +30,7 @@ This project addresses the following questions:
 
 ---
 
-## 🔄 Project Workflow
+##  Project Workflow
 The system utilizes a structured machine learning pipeline:
 
 ```mermaid
@@ -45,7 +45,7 @@ graph TD
 
 ---
 
-## 📊 Dataset Description
+##  Dataset Description
 The model leverages historical data sourced from the **Ergast F1 Motor Racing Database** (CSV files located in the [f1 dataset/](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/f1%20dataset) directory).
 
 ### Key Features Used:
@@ -62,7 +62,7 @@ The model leverages historical data sourced from the **Ergast F1 Motor Racing Da
 
 ---
 
-## 📈 Exploratory Data Analysis (EDA)
+##  Exploratory Data Analysis (EDA)
 Exploratory analysis was conducted in Jupyter Notebooks ([notebooks/](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/notebooks)) to extract key correlations and trends:
 * **The Starting Grid Advantage:** Analyzing how highly starting position correlates with podium results across various tracks.
 * **Constructor Dominance:** Visualizing constructor-wide points accumulation across seasons to analyze mechanical advantages.
@@ -70,7 +70,7 @@ Exploratory analysis was conducted in Jupyter Notebooks ([notebooks/](file:///d:
 
 ---
 
-## 🛠️ Feature Engineering
+##  Feature Engineering
 To capture the dynamic nature of F1, several custom, domain-specific features were engineered in [utils.py](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/utils.py):
 
 | Feature Name | Type | Description |
@@ -85,7 +85,7 @@ To capture the dynamic nature of F1, several custom, domain-specific features we
 
 ---
 
-## 🤖 Machine Learning Models
+##  Machine Learning Models
 
 The predictive system utilizes two primary models optimized for their respective tasks:
 
@@ -107,7 +107,7 @@ The predictive system utilizes two primary models optimized for their respective
 
 ---
 
-## 📊 Model Evaluation
+## Model Evaluation
 
 ### Evaluation Strategy
 Models are split using a **temporal split** rather than a random k-fold split to prevent data leakage (since F1 seasons follow strict chronological trends):
@@ -125,7 +125,7 @@ Models are split using a **temporal split** rather than a random k-fold split to
 
 ---
 
-## 💡 Results and Insights
+##  Results and Insights
 * **Feature Importance:** Across the Random Forest model, `grid` position is the highest predictor of podium outcome, followed closely by `qual_gap_to_pole` and `constructor_prior_pts_season`.
 * **Form Factor:** Driver and constructor recent podium counts (rolling 3-race form) significantly boost the predictions of mid-tier drivers experiencing sudden development peaks.
 * **Strategy Indicators:** The Pit Stop Predictor automatically outputs strategy designations in the web app:
@@ -135,7 +135,7 @@ Models are split using a **temporal split** rather than a random k-fold split to
 
 ---
 
-## 💻 Streamlit Web Application
+## Streamlit Web Application
 
 The interactive web dashboard ([app.py](file:///d:/Data%20Science/projects/F1%20Prediction%20Project/app.py)) provides a visual interface for race simulations.
 
@@ -161,7 +161,7 @@ The interactive web dashboard ([app.py](file:///d:/Data%20Science/projects/F1%20
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 ```
 ├── f1 dataset/                   # Ergast F1 CSV raw database files
 │   ├── circuits.csv              # Track locations and altitudes
@@ -191,7 +191,7 @@ The interactive web dashboard ([app.py](file:///d:/Data%20Science/projects/F1%20
 
 ---
 
-## 🚀 Setup and Installation
+## Setup and Installation
 
 ### 1. Clone the Repository
 ```bash
@@ -233,21 +233,21 @@ python train_pit_stop.py
 
 ---
 
-## 🔮 Future Improvements
+## Future Improvements
 * **Tire Compound Strategy:** Integrating start/end tire compound features to predict pit windows more accurately.
 * **Weather Integration:** Incorporating weather indicators (ambient temperature, track temperature, wet/dry conditions).
 * **Explainable AI (XAI):** Implementing SHAP (SHapley Additive exPlanations) values to explain individual driver podium probabilities.
 * **Advanced Regressors:** Integrating XGBoost and LightGBM models for comparison against the Random Forest baseline.
 * **Live API Feed:** Replacing static CSV dumps with live telemetry feeds via the FastF1 API during race weekends.
 
-## ⚠️ Project Limitations & Scope
+##Project Limitations & Scope
 * **Unpredictable On-Track Events:** F1 outcomes are heavily influenced by stochastic variables such as crashes, safety cars, mechanical retirements (DNFs), and sudden weather shifts, which cannot be fully captured by historical tabular data alone.
 * **Lack of Real-Time Telemetry:** Predictions are calculated using pre-race configurations and seasonal dynamics; they do not account for live sector times, tire temperature degradation, or real-time engine mode settings during a race.
 * **Probability-Based Outlook:** Predictions represent statistical probabilities based on historical patterns, not guaranteed race results.
 
 ---
 
-## 👤 Author
-* **Ruchitha A V** - 3rd Year Undergraduate / Aspiring Machine Learning Engineer & Data Scientist
-* [LinkedIn Profile](https://linkedin.com/in/ruchithaav)
+## Author
+* **Ruchitha Vithana** 
+* [LinkedIn Profile](www.linkedin.com/in/ruchitha-vithana)
 * [GitHub Profile](https://github.com/RuchithaAV)
