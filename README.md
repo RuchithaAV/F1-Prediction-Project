@@ -151,7 +151,7 @@ The interactive web dashboard ([app.py](file:///d:/Data%20Science/projects/F1%20
 
 ---
 
-## 🛠️ Technologies Used
+## Technologies Used
 * **Programming Language:** Python 3.9+
 * **Data Processing & Analytics:** Pandas, NumPy
 * **Visualization:** Matplotlib, Seaborn
