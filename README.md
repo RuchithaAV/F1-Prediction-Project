@@ -230,19 +230,3 @@ python train.py
 # Retrain Pit Stop Predictor
 python train_pit_stop.py
 ```
-
----
-
-## 🔮 Future Improvements
-* **Tire Compound Strategy:** Integrating start/end tire compound features to predict pit windows more accurately.
-* **Weather Integration:** Incorporating weather indicators (ambient temperature, track temperature, wet/dry conditions).
-* **Explainable AI (XAI):** Implementing SHAP (SHapley Additive exPlanations) values to explain individual driver podium probabilities.
-* **Advanced Regressors:** Integrating XGBoost and LightGBM models for comparison against the Random Forest baseline.
-* **Live API Feed:** Replacing static CSV dumps with live telemetry feeds via the FastF1 API during race weekends.
-
----
-
-## 👤 Author
-* **Your Name** - Undergraduate Student / Aspiring MLE & Data Scientist
-* [LinkedIn Profile](https://linkedin.com/in/your-profile)
-* [GitHub Profile](https://github.com/your-username)
