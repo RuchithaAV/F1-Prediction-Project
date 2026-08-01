@@ -1,17 +1,17 @@
 # Formula 1 Race Prediction & Motorsport Analytics Using Machine Learning
 
-An end-to-end data science and machine learning project designed to simulate race podium finishes, predict optimal pit stop strategies, and analyze driver/circuit profiles using historical motorsport data. 
+An end-to-end data science and machine learning project designed to simulate race podium finishes, estimate pit stop timing patterns using historical race data, and analyze driver/circuit profiles using historical motorsport data. 
 
-Developed as an undergraduate portfolio project, this repository combines statistical modeling, feature engineering, and unsupervised learning, all packaged into an interactive, high-fidelity **Streamlit Web Application** for real-time race simulations.
+Developed as an undergraduate portfolio project, this repository combines statistical modeling, feature engineering, and unsupervised learning, all packaged into an interactive **Streamlit Web Application** for historical race simulations and machine learning-based predictions.
 
 ---
 
 ##  Project Overview
 Formula 1 is a sport dictated by fractions of a second. Beyond driver skill and aerodynamic design, race strategy—such as pit window optimization and podium probability forecasting—is crucial to team success. 
 
-This project explores how machine learning can extract actionable insights from historical motorsport datasets. By engineering domain-specific features from historical race results, qualifying telemetry, and driver histories, we build models that:
+This project explores how machine learning can extract actionable insights from historical motorsport datasets. By engineering domain-specific features from historical race results, qualifying performance data, and driver histories, we build models that:
 1. **Simulate Podiums:** Predict the probability of drivers finishing in P1, P2, or P3 based on starting grid setups, qualifying performance, and seasonal form.
-2. **Forecast Pit Stop Windows:** Estimate the optimal lap for a driver's pit stops based on race conditions and driver characteristics.
+2. **Forecast Pit Stop Windows:** Estimate pit stop timing patterns using historical race data based on race conditions and driver characteristics.
 3. **Analyze Driver and Track Profiles:** Group drivers and circuits using unsupervised clustering to uncover career patterns and track characteristics.
 
 *Disclaimer: This is an undergraduate machine learning project designed for academic and portfolio demonstration purposes. It does not represent a real-time production-grade betting system.*
@@ -23,7 +23,7 @@ In Formula 1, predicting outcomes is highly complex due to non-linear variables 
 
 This project addresses the following questions:
 * **Outcome Prediction:** Given a starting grid and qualifying gaps, what is the probability profile of the top finishes?
-* **Strategy Formulation:** Based on track parameters and driver experience, when is the optimal lap to execute a pit stop?
+* **Strategy Formulation:** Based on track parameters and driver experience, what pit stop timing patterns are associated with different race conditions and driver/team characteristics?
 * **Cohort Identification:** How do driver trajectories and circuit properties cluster dynamically over time?
 
 **Target Audience:** Motorsport analysts, strategy enthusiasts, and recruiters looking for applied machine learning pipelines handling tabular temporal data.
@@ -50,9 +50,9 @@ The model leverages historical data sourced from the **Ergast F1 Motor Racing Da
 
 ### Key Features Used:
 * **Historical Results:** Race outcomes (`results.csv`), grid start positions, and final classifications.
-* **Qualifying Telemetry:** Grid times (`qualifying.csv`) to compute qualifying margins and gaps.
+* **Qualifying Performance Data:** Grid times (`qualifying.csv`) to compute qualifying margins and gaps.
 * **Metadata Tables:** `drivers.csv`, `constructors.csv`, and `races.csv` for demographic and historical context.
-* **Pit Stop Telemetry:** `pit_stops.csv` tracking exact pit lap details from modern eras.
+* **Historical Pit Stop Records:** `pit_stops.csv` tracking exact pit lap details from modern eras.
 
 ### Data Preprocessing Steps:
 1. **Null Representation:** SQL null representations (such as `\N`) are cleaned and imputed with pandasNaN.
@@ -105,9 +105,24 @@ The predictive system utilizes two primary models optimized for their respective
   * **Cluster Drivers** based on average finishing positions, grid ranks, points accumulation, and DNF rates into four distinct cohorts (*Elite Champions*, *Strong Performers*, *Midfield Racers*, and *Backmarkers*).
   * **Cluster Circuits** based on layout characteristics, average pit stops, DNF ratios, and historic calendars into three distinct cohorts (*Classic/Established Circuits*, *Modern/Recent Street Circuits*, and *Temporary/COVID Calendar Additions*).
 
+## Model Selection Approach
+A Logistic Regression model can be used as a baseline classifier to compare against tree-based approaches. Random Forest was selected because it can capture nonlinear relationships between race features such as grid position, qualifying performance, driver form, and constructor strength.
+
 ---
 
 ## Model Evaluation
+
+## Model Evaluation Metrics
+
+For classification, the following evaluation metrics are tracked to evaluate performance:
+- Accuracy
+- Precision
+- Recall
+- F1-score
+- ROC-AUC
+- Confusion Matrix
+
+Since podium finishes represent a minority class compared with all race entries, accuracy alone is not sufficient to evaluate classification performance.
 
 ### Evaluation Strategy
 Models are split using a **temporal split** rather than a random k-fold split to prevent data leakage (since F1 seasons follow strict chronological trends):
@@ -148,6 +163,26 @@ The interactive web dashboard ([app.py](file:///d:/Data%20Science/projects/F1%20
    * Select a driver, team, track, and starting grid.
    * View the predicted target pit stop lap and corresponding strategy flags (Undercut, Overcut, Standard).
    * Interactive progress bars visualizing stint lengths over the total race distance.
+
+---
+
+## Application Screenshots
+
+### Streamlit Dashboard
+
+![Dashboard](images/dashboard.png)
+
+### Podium Prediction
+
+![Podium Prediction](images/podium_prediction.png)
+
+### Pit Stop Timing Prediction
+
+![Pit Stop Prediction](images/pit_stop_prediction.png)
+
+### Driver and Circuit Clustering
+
+![Clustering](images/clustering.png)
 
 ---
 
