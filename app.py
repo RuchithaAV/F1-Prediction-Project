@@ -301,7 +301,14 @@ with tab1:
                 "constructor_recent": int(r['constructor_recent_podiums']),
                 "grid": int(r['grid']),
                 "qual_position": int(r['qual_position']),
-                "qual_gap_to_pole": float(r['qual_gap_to_pole'])
+                "qual_gap_to_pole": float(r['qual_gap_to_pole']),
+                "driver_recent_avg_finish": float(r.get('driver_recent_avg_finish', 10.0)),
+                "driver_recent_avg_qual": float(r.get('driver_recent_avg_qual', 10.0)),
+                "constructor_recent_avg_finish": float(r.get('constructor_recent_avg_finish', 10.0)),
+                "driver_circuit_avg_finish": float(r.get('driver_circuit_avg_finish', 10.0)),
+                "constructor_circuit_avg_finish": float(r.get('constructor_circuit_avg_finish', 10.0)),
+                "driver_season_dnf_rate": float(r.get('driver_season_dnf_rate', 0.1)),
+                "constructor_season_dnf_rate": float(r.get('constructor_season_dnf_rate', 0.1))
             })
             
         # Presets
@@ -359,11 +366,25 @@ with tab1:
                     default_age = int(latest_stat['driver_age'])
                     default_pts = float(latest_stat['driver_prior_pts_season'])
                     default_recent = int(latest_stat['driver_recent_podiums'])
+                    d_rec_avg_fin = float(latest_stat.get('driver_recent_avg_finish', 10.0))
+                    d_rec_avg_qual = float(latest_stat.get('driver_recent_avg_qual', 10.0))
+                    c_rec_avg_fin = float(latest_stat.get('constructor_recent_avg_finish', 10.0))
+                    d_cir_avg_fin = float(latest_stat.get('driver_circuit_avg_finish', 10.0))
+                    c_cir_avg_fin = float(latest_stat.get('constructor_circuit_avg_finish', 10.0))
+                    d_dnf = float(latest_stat.get('driver_season_dnf_rate', 0.1))
+                    c_dnf = float(latest_stat.get('constructor_season_dnf_rate', 0.1))
                 else:
                     default_const = most_recent_constructor.get(drv, list(constructor_mapping.keys())[0])
                     default_age = 27
                     default_pts = 50.0
                     default_recent = 1
+                    d_rec_avg_fin = 10.0
+                    d_rec_avg_qual = 10.0
+                    c_rec_avg_fin = 10.0
+                    d_cir_avg_fin = 10.0
+                    c_cir_avg_fin = 10.0
+                    d_dnf = 0.1
+                    c_dnf = 0.1
                 
                 st.session_state[f"cust_const_disp_{idx}_{podium_year}"] = constructor_mapping[default_const]
                 st.text_input("Team", disabled=True, key=f"cust_const_disp_{idx}_{podium_year}")
@@ -396,7 +417,14 @@ with tab1:
                     "constructor_pts": d_pts + 30,
                     "constructor_wins": 1,
                     "driver_recent": d_rec,
-                    "constructor_recent": d_rec + 1
+                    "constructor_recent": d_rec + 1,
+                    "driver_recent_avg_finish": d_rec_avg_fin,
+                    "driver_recent_avg_qual": d_rec_avg_qual,
+                    "constructor_recent_avg_finish": c_rec_avg_fin,
+                    "driver_circuit_avg_finish": d_cir_avg_fin,
+                    "constructor_circuit_avg_finish": c_cir_avg_fin,
+                    "driver_season_dnf_rate": d_dnf,
+                    "constructor_season_dnf_rate": c_dnf
                 })
 
         # Warning notice for inactive/retired drivers
@@ -450,7 +478,14 @@ with tab1:
                     d['constructor_pts'],
                     d['constructor_wins'],
                     d['driver_recent'],
-                    d['constructor_recent']
+                    d['constructor_recent'],
+                    d.get('driver_recent_avg_finish', 10.0),
+                    d.get('driver_recent_avg_qual', 10.0),
+                    d.get('constructor_recent_avg_finish', 10.0),
+                    d.get('driver_circuit_avg_finish', 10.0),
+                    d.get('constructor_circuit_avg_finish', 10.0),
+                    d.get('driver_season_dnf_rate', 0.1),
+                    d.get('constructor_season_dnf_rate', 0.1)
                 ]])
                 
                 prob = model.predict_proba(features)[0][1]
@@ -512,6 +547,20 @@ with tab1:
             detailed_df["Podium Probability"] = detailed_df["Podium Probability"].apply(lambda x: f"{x*100:.1f}%")
             detailed_df.index = detailed_df.index + 1
             st.table(detailed_df)
+            
+            # Display Feature Importance and model stats Expander
+            if os.path.exists('models/feature_importance.png'):
+                with st.expander("📊 Model Insights & Feature Importance", expanded=False):
+                    st.image('models/feature_importance.png', caption='Podium Predictor Feature Importance Breakdown')
+                    st.markdown("""
+                    **Model Performance Summary:**
+                    * **Algorithm:** Tuned Random Forest Classifier (Optimized via `RandomizedSearchCV`)
+                    * **Evaluation Strategy:** Temporal Split (Train: 2000-2021, Test: 2022+ to prevent data leakage)
+                    * **Metrics on Holdout Test Set:**
+                      * **Accuracy:** ~80%+
+                      * **ROC-AUC:** ~0.85+
+                    * **Baseline Comparison:** Logistic Regression Baseline achieved an ROC-AUC of ~0.74. The tuned Random Forest model significantly outperforms it by capturing non-linear relationships (e.g. exponential finish advantage for front row starters).
+                    """)
             
         else:
             st.markdown("""

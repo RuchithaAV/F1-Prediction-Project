@@ -122,4 +122,24 @@ def engineer_podium_features(results, races, drivers, constructors, qualifying):
     constructor_history = df.sort_values('date').groupby('constructorId')
     df['constructor_recent_podiums'] = constructor_history['podium_finish'].shift(1).rolling(3, min_periods=1).sum().fillna(0)
     
+    # Advanced features for student portfolio upgrade:
+    # 1. Driver recent average finishing & qualifying positions (last 3 races)
+    df['driver_recent_avg_finish'] = driver_history['positionOrder'].shift(1).rolling(3, min_periods=1).mean().fillna(10.0)
+    df['driver_recent_avg_qual'] = driver_history['qual_position'].shift(1).rolling(3, min_periods=1).mean().fillna(10.0)
+    
+    # 2. Constructor recent average finishing position (last 3 races)
+    df['constructor_recent_avg_finish'] = constructor_history['positionOrder'].shift(1).rolling(3, min_periods=1).mean().fillna(10.0)
+    
+    # 3. Track Suitability: Driver & Constructor average finish at this specific track in previous races
+    df['driver_circuit_avg_finish'] = df.sort_values('date').groupby(['driverId', 'circuitId'])['positionOrder'].transform(lambda x: x.shift(1).expanding().mean()).fillna(10.0)
+    df['constructor_circuit_avg_finish'] = df.sort_values('date').groupby(['constructorId', 'circuitId'])['positionOrder'].transform(lambda x: x.shift(1).expanding().mean()).fillna(10.0)
+    
+    # 4. Reliability: Driver & Constructor seasonal DNF rate
+    df['is_dnf'] = (df['positionText'] == 'R').astype(int)
+    df['driver_season_dnf_rate'] = df.groupby(['year', 'driverId'])['is_dnf'].transform(lambda x: x.shift(1).expanding().mean()).fillna(0.0)
+    df['constructor_season_dnf_rate'] = df.groupby(['year', 'constructorId'])['is_dnf'].transform(lambda x: x.shift(1).expanding().mean()).fillna(0.0)
+    
+    # Drop intermediate columns
+    df.drop(columns=['is_dnf'], inplace=True)
+    
     return df

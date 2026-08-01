@@ -74,19 +74,51 @@ print(f"Train size: {X_train.shape[0]} rows (2018-2022)")
 print(f"Test size: {X_test.shape[0]} rows (2023+)")
 
 # Model training
-print("Training Gradient Boosting Regressor...")
-gb = GradientBoostingRegressor(n_estimators=100, random_state=42)
-gb.fit(X_train, y_train)
+print("Training Default Gradient Boosting Regressor...")
+gb_default = GradientBoostingRegressor(n_estimators=100, random_state=42)
+gb_default.fit(X_train, y_train)
 
-# Evaluation
-preds = gb.predict(X_test)
-print("\n=== Model Performance ===")
-print(f"MAE: {mean_absolute_error(y_test, preds):.2f}%")
-print(f"R2 Score: {r2_score(y_test, preds):.4f}")
+# Default Evaluation
+default_preds = gb_default.predict(X_test)
+default_mae = mean_absolute_error(y_test, default_preds)
+default_r2 = r2_score(y_test, default_preds)
+
+# Hyperparameter Tuning via RandomizedSearchCV
+print("Tuning Gradient Boosting Regressor via RandomizedSearchCV...")
+from sklearn.model_selection import RandomizedSearchCV
+
+param_dist = {
+    'n_estimators': [50, 100, 150],
+    'learning_rate': [0.01, 0.05, 0.1, 0.2],
+    'max_depth': [3, 4, 5]
+}
+
+gb_search = RandomizedSearchCV(
+    estimator=GradientBoostingRegressor(random_state=42),
+    param_distributions=param_dist,
+    n_iter=5,
+    cv=3,
+    scoring='neg_mean_absolute_error',
+    random_state=42,
+    n_jobs=-1
+)
+gb_search.fit(X_train, y_train)
+best_gb = gb_search.best_estimator_
+print(f"Best hyperparameters found: {gb_search.best_params_}")
+
+# Tuned Evaluation
+tuned_preds = best_gb.predict(X_test)
+tuned_mae = mean_absolute_error(y_test, tuned_preds)
+tuned_r2 = r2_score(y_test, tuned_preds)
+
+print("\n=== Model Performance Comparison ===")
+print(f"Default Model -> MAE: {default_mae:.2f}%, R2 Score: {default_r2:.4f}")
+print(f"Tuned Model   -> MAE: {tuned_mae:.2f}%, R2 Score: {tuned_r2:.4f}")
+print("====================================")
 
 # Save model and encoders
 print("\nSaving model and encoders...")
-joblib.dump(gb, 'models/f1_pit_stop_model.joblib')
+joblib.dump(best_gb, 'models/f1_pit_stop_model.joblib')
 joblib.dump(le_driver, 'models/le_driver_pit.joblib')
 joblib.dump(le_constructor, 'models/le_constructor_pit.joblib')
 joblib.dump(le_race, 'models/le_race_pit.joblib')
