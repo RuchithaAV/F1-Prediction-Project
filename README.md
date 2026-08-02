@@ -230,7 +230,7 @@ The interactive web dashboard ([app.py](file:///d:/Data%20Science/projects/F1%20
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/F1-Prediction-Project.git
+https://github.com/RuchithaAV/F1-Prediction-Project
 cd F1-Prediction-Project
 ```
 
