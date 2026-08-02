@@ -275,7 +275,7 @@ python train_pit_stop.py
 * **Advanced Regressors:** Integrating XGBoost and LightGBM models for comparison against the Random Forest baseline.
 * **Live API Feed:** Replacing static CSV dumps with live telemetry feeds via the FastF1 API during race weekends.
 
-##Project Limitations & Scope
+## Project Limitations & Scope
 * **Unpredictable On-Track Events:** F1 outcomes are heavily influenced by stochastic variables such as crashes, safety cars, mechanical retirements (DNFs), and sudden weather shifts, which cannot be fully captured by historical tabular data alone.
 * **Lack of Real-Time Telemetry:** Predictions are calculated using pre-race configurations and seasonal dynamics; they do not account for live sector times, tire temperature degradation, or real-time engine mode settings during a race.
 * **Probability-Based Outlook:** Predictions represent statistical probabilities based on historical patterns, not guaranteed race results.
