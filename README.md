@@ -14,8 +14,6 @@ This project explores how machine learning can extract actionable insights from 
 2. **Forecast Pit Stop Windows:** Estimate pit stop timing patterns using historical race data based on race conditions and driver characteristics.
 3. **Analyze Driver and Track Profiles:** Group drivers and circuits using unsupervised clustering to uncover career patterns and track characteristics.
 
-*Disclaimer: This is an undergraduate machine learning project designed for academic and portfolio demonstration purposes. It does not represent a real-time production-grade betting system.*
-
 ---
 
 ## Problem Statement
