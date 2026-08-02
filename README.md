@@ -169,20 +169,20 @@ The interactive web dashboard ([app.py](file:///d:/Data%20Science/projects/F1%20
 ## Application Screenshots
 
 ### Streamlit Dashboard
-
-![Dashboard](images/dashboard.png)
+<img width="1911" height="916" alt="Screenshot 2026-08-02 021025" src="https://github.com/user-attachments/assets/6762fd61-c8cb-4c05-a13e-585bd3c6c9d4" />
 
 ### Podium Prediction
 
-![Podium Prediction](images/podium_prediction.png)
+<img width="1917" height="902" alt="Screenshot 2026-08-02 021137" src="https://github.com/user-attachments/assets/259dce4b-097d-4b37-b374-e2cb58c47ec5" />
 
 ### Pit Stop Timing Prediction
 
-![Pit Stop Prediction](images/pit_stop_prediction.png)
+<img width="1917" height="906" alt="Screenshot 2026-08-02 021224" src="https://github.com/user-attachments/assets/6042b09a-3866-43c3-be77-c3b05b53a634" />
 
 ### Driver and Circuit Clustering
 
-![Clustering](images/clustering.png)
+<img width="1917" height="896" alt="Screenshot 2026-08-02 021324" src="https://github.com/user-attachments/assets/273684cb-6ed6-43fb-9f13-544c7055d024" />
+<img width="1917" height="850" alt="Screenshot 2026-08-02 021254" src="https://github.com/user-attachments/assets/374a704c-56a9-4ffe-9c19-68a1f405e12a" />
 
 ---
 
